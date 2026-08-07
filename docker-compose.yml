@@ -38,12 +38,17 @@ services:
     build:
       context: ./frontend
       args:
-        # Empty on purpose: the browser calls /api on whatever address it is
-        # already using, and nginx forwards it to the api service. Anything
-        # else has to be decided when the image is built, which is wrong for a
-        # value that changes with where the app is deployed — it is what made
-        # the first Coolify deployment call the visitor's own machine.
-        VITE_API_BASE_URL: ""
+        # The API's address, compiled into the page at build time.
+        #
+        # This was empty — meaning "same origin" — while nginx forwarded /api to
+        # the api service. That proxy was removed so the frontend can be
+        # deployed on its own in Coolify, which leaves nginx answering /api with
+        # index.html: an HTTP 200 containing a web page where the app expects
+        # JSON, which fails in a way that does not look like a failure.
+        #
+        # So locally the browser is pointed straight at the api container's
+        # published port. CORS_ORIGINS above already allows this origin.
+        VITE_API_BASE_URL: http://localhost:${API_PORT:-8000}
     depends_on:
       - api
     ports:
