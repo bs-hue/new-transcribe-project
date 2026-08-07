@@ -1,3 +1,4 @@
+import { LogIn, Mic } from "lucide-react";
 import { useEffect, useState } from "react";
 import { Link, Navigate } from "react-router-dom";
 import { ErrorNotice } from "@/components/shared";
@@ -72,16 +73,18 @@ export function RegisterPage() {
   return (
     <div className="flex min-h-screen items-center justify-center bg-background px-6">
       <Card className="w-full max-w-sm">
-        <CardHeader className="space-y-3">
-          <span className="flex h-10 w-10 items-center justify-center rounded-lg bg-primary text-lg font-bold text-primary-foreground">
-            R
+        <CardHeader className="space-y-4">
+          <span className="flex h-12 w-12 items-center justify-center rounded-xl bg-primary text-primary-foreground">
+            <Mic className="h-6 w-6" />
           </span>
-          <div>
-            <CardTitle>Create an account</CardTitle>
+          <div className="space-y-1">
+            <CardTitle className="text-xl leading-snug">
+              Instagram &amp; YouTube Transcription Agent
+            </CardTitle>
             <CardDescription>
               {mode === "approval"
-                ? "An administrator reviews new accounts before they can sign in."
-                : "Sign up to start collecting transcripts."}
+                ? "Create an account — an administrator reviews new accounts before they can sign in."
+                : "Create an account to start collecting transcripts."}
             </CardDescription>
           </div>
         </CardHeader>
@@ -170,12 +173,20 @@ export function RegisterPage() {
                 </Button>
               </form>
 
-              <p className="mt-4 text-xs text-muted-foreground">
-                Already have an account?{" "}
-                <Link to="/login" className="underline">
+              <div className="my-5 flex items-center gap-3">
+                <span className="h-px flex-1 bg-border" />
+                <span className="text-xs text-muted-foreground">
+                  Already registered?
+                </span>
+                <span className="h-px flex-1 bg-border" />
+              </div>
+
+              <Button asChild variant="outline" className="w-full">
+                <Link to="/login">
+                  <LogIn className="h-4 w-4" />
                   Sign in
                 </Link>
-              </p>
+              </Button>
             </>
           )}
         </CardContent>

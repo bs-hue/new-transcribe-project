@@ -1,8 +1,8 @@
 import {
-  ChevronDown,
   LayoutDashboard,
   ListChecks,
   LogOut,
+  Mic,
   Plus,
   Search,
   Settings,
@@ -10,14 +10,6 @@ import {
 } from "lucide-react";
 import { NavLink, Outlet } from "react-router-dom";
 import { Button } from "@/components/ui/button";
-import {
-  DropdownMenu,
-  DropdownMenuContent,
-  DropdownMenuItem,
-  DropdownMenuLabel,
-  DropdownMenuSeparator,
-  DropdownMenuTrigger,
-} from "@/components/ui/dropdown-menu";
 import { useAuth } from "@/lib/auth";
 import { cn } from "@/lib/utils";
 
@@ -37,11 +29,18 @@ export function Layout() {
       <header className="border-b bg-card">
         <div className="container flex h-16 items-center justify-between gap-6">
           <div className="flex min-w-0 items-center gap-6">
-            <NavLink to="/" className="flex shrink-0 items-center gap-2">
-              <span className="flex h-8 w-8 items-center justify-center rounded-lg bg-primary text-sm font-bold text-primary-foreground">
-                R
+            <NavLink to="/" className="flex shrink-0 items-center gap-2.5">
+              <span className="flex h-9 w-9 items-center justify-center rounded-lg bg-primary text-primary-foreground">
+                <Mic className="h-4.5 w-4.5" />
               </span>
-              <span className="hidden font-semibold lg:inline">Content Research Hub</span>
+              {/* The full name is long, so it is shortened rather than
+                  truncated mid-word on narrower screens. */}
+              <span className="hidden font-semibold leading-tight xl:inline">
+                Instagram &amp; YouTube Transcription Agent
+              </span>
+              <span className="hidden font-semibold lg:inline xl:hidden">
+                Transcription Agent
+              </span>
             </NavLink>
 
             <nav className="flex items-center gap-1 overflow-x-auto">
@@ -66,34 +65,32 @@ export function Layout() {
             </nav>
           </div>
 
-          <DropdownMenu>
-            <DropdownMenuTrigger asChild>
-              <Button variant="ghost" size="sm" className="shrink-0">
-                <span className="hidden max-w-[12rem] truncate sm:inline">
-                  {user?.full_name || user?.email}
-                </span>
-                <ChevronDown />
-              </Button>
-            </DropdownMenuTrigger>
-            <DropdownMenuContent align="end">
-              <DropdownMenuLabel>{user?.email}</DropdownMenuLabel>
-              <DropdownMenuSeparator />
-              <DropdownMenuItem asChild>
-                <NavLink to="/settings" className="cursor-pointer">
-                  <span className="flex items-center gap-2">
-                    <Settings className="h-4 w-4" />
-                    Settings
-                  </span>
-                </NavLink>
-              </DropdownMenuItem>
-              <DropdownMenuItem onSelect={signOut} className="cursor-pointer">
-                <span className="flex items-center gap-2">
-                  <LogOut className="h-4 w-4" />
-                  Sign out
-                </span>
-              </DropdownMenuItem>
-            </DropdownMenuContent>
-          </DropdownMenu>
+          {/* Signing out used to be two clicks inside a dropdown, which is one
+              click too many for the thing people look for when they want to
+              leave. Settings has its own nav entry, so the menu earned nothing. */}
+          <div className="flex shrink-0 items-center gap-2">
+            <div className="hidden text-right sm:block">
+              <p className="max-w-[12rem] truncate text-sm font-medium leading-tight">
+                {user?.full_name || user?.email}
+              </p>
+              {user?.full_name ? (
+                <p className="max-w-[12rem] truncate text-xs text-muted-foreground">
+                  {user.email}
+                </p>
+              ) : null}
+            </div>
+
+            <Button asChild variant="ghost" size="icon" title="Settings">
+              <NavLink to="/settings" aria-label="Settings">
+                <Settings className="h-4 w-4" />
+              </NavLink>
+            </Button>
+
+            <Button variant="outline" size="sm" onClick={signOut}>
+              <LogOut className="h-4 w-4" />
+              <span className="hidden sm:inline">Sign out</span>
+            </Button>
+          </div>
         </div>
       </header>
 
@@ -102,7 +99,7 @@ export function Layout() {
       </main>
 
       <footer className="container pb-10 text-xs text-muted-foreground">
-        Internal research tool · YouTube and Instagram Reels
+        Instagram &amp; YouTube Transcription Agent
       </footer>
     </div>
   );

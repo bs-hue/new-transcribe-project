@@ -28,7 +28,7 @@ class Settings(BaseSettings):
     # --- Core ---
     environment: str = "development"
     log_level: str = "INFO"
-    app_name: str = "Content Research Hub"
+    app_name: str = "Instagram & YouTube Transcription Agent"
 
     # --- Database ---
     database_url: str = "sqlite+aiosqlite:///./data/app.db"

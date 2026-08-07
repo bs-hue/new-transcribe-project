@@ -1,3 +1,4 @@
+import { Mic, UserPlus } from "lucide-react";
 import { useEffect, useState } from "react";
 import { Link, Navigate } from "react-router-dom";
 import { ErrorNotice } from "@/components/shared";
@@ -50,13 +51,17 @@ export function LoginPage() {
   return (
     <div className="flex min-h-screen items-center justify-center bg-background px-6">
       <Card className="w-full max-w-sm">
-        <CardHeader className="space-y-3">
-          <span className="flex h-10 w-10 items-center justify-center rounded-lg bg-primary text-lg font-bold text-primary-foreground">
-            R
+        <CardHeader className="space-y-4">
+          <span className="flex h-12 w-12 items-center justify-center rounded-xl bg-primary text-primary-foreground">
+            <Mic className="h-6 w-6" />
           </span>
-          <div>
-            <CardTitle>Content Research Hub</CardTitle>
-            <CardDescription>Sign in to continue.</CardDescription>
+          <div className="space-y-1">
+            <CardTitle className="text-xl leading-snug">
+              Instagram &amp; YouTube Transcription Agent
+            </CardTitle>
+            <CardDescription>
+              Turn video links into searchable text. Sign in to continue.
+            </CardDescription>
           </div>
         </CardHeader>
 
@@ -94,19 +99,36 @@ export function LoginPage() {
             </Button>
           </form>
 
-          <p className="mt-4 text-xs text-muted-foreground">
-            {mode === "closed" ? (
-              "No account? Ask an administrator on your team to create one."
-            ) : (
-              <>
-                No account?{" "}
-                <Link to="/register" className="underline">
-                  Create one
+          {mode === "closed" ? (
+            <p className="mt-5 text-xs text-muted-foreground">
+              No account? Ask an administrator on your team to create one.
+            </p>
+          ) : (
+            <>
+              {/* A labelled divider, so the second button reads as an
+                  alternative route rather than a second step of the form. */}
+              <div className="my-5 flex items-center gap-3">
+                <span className="h-px flex-1 bg-border" />
+                <span className="text-xs text-muted-foreground">
+                  New here?
+                </span>
+                <span className="h-px flex-1 bg-border" />
+              </div>
+
+              <Button asChild variant="outline" className="w-full">
+                <Link to="/register">
+                  <UserPlus className="h-4 w-4" />
+                  Create an account
                 </Link>
-                {mode === "approval" ? " — an administrator will approve it." : ""}
-              </>
-            )}
-          </p>
+              </Button>
+
+              {mode === "approval" ? (
+                <p className="mt-3 text-center text-xs text-muted-foreground">
+                  An administrator approves new accounts before they can sign in.
+                </p>
+              ) : null}
+            </>
+          )}
         </CardContent>
       </Card>
     </div>

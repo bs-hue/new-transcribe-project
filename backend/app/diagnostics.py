@@ -294,7 +294,7 @@ async def run_diagnostics(settings: Settings | None = None, *, deep: bool = Fals
 def render(report: Report) -> str:
     """Format the report for a terminal, for a non-technical reader."""
     width = max(len(r.name) for r in report.results) + 2
-    lines = ["", "Content Research Hub — system check", "=" * 52, ""]
+    lines = ["", "Instagram & YouTube Transcription Agent — system check", "=" * 52, ""]
 
     for result in report.results:
         mark = "OK  " if result.ok else ("WARN" if result.warning_only else "FAIL")
