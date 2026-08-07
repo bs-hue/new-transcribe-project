@@ -1,0 +1,56 @@
+services:
+  api:
+    build:
+      context: ./backend
+      args:
+        # Coolify sets SOURCE_COMMIT. Anywhere else it is simply "unknown".
+        BUILD_COMMIT: ${SOURCE_COMMIT:-unknown}
+    env_file: .env
+    environment:
+      # Container-internal paths override whatever .env says about local dirs.
+      #
+      # The database is the exception: set EXTERNAL_DATABASE_URL in .env to run
+      # against a hosted PostgreSQL (Supabase) instead of the local file.
+      #
+      # Deliberately NOT named DATABASE_URL. That name is already used in .env
+      # for running without Docker, where it points at a path on your machine —
+      # letting it through here would quietly send the container to the wrong
+      # file and make existing transcripts look like they had vanished.
+      DATABASE_URL: ${EXTERNAL_DATABASE_URL:-sqlite+aiosqlite:////data/app.db}
+      WORK_DIR: /data/work
+      # Whisper models land here so they survive a container rebuild instead of
+      # being re-downloaded (~150 MB for `base`).
+      HF_HOME: /data/models
+      # The site and the API share one origin (nginx proxies /api), so there is
+      # no cross-origin request to permit in normal use. PUBLIC_URL is still
+      # honoured for anyone putting the API on its own hostname.
+      CORS_ORIGINS: ${PUBLIC_URL:-http://localhost:${WEB_PORT:-3000}}
+    volumes:
+      - api-data:/data
+    # Published for local development and for `doctor`. In production the API
+    # does not need to be reachable from outside at all — the site proxies to
+    # it over the private network between the two containers.
+    ports:
+      - "${API_PORT:-8000}:8000"
+    restart: unless-stopped
+
+  web:
+    build:
+      context: ./frontend
+      args:
+        # Empty on purpose: the browser calls /api on whatever address it is
+        # already using, and nginx forwards it to the api service. Anything
+        # else has to be decided when the image is built, which is wrong for a
+        # value that changes with where the app is deployed — it is what made
+        # the first Coolify deployment call the visitor's own machine.
+        VITE_API_BASE_URL: ""
+    depends_on:
+      - api
+    ports:
+      - "${WEB_PORT:-3000}:80"
+    restart: unless-stopped
+
+volumes:
+  api-data:
+# For production, swap SQLite for Postgres by adding a `db` service and setting
+# DATABASE_URL=postgresql+asyncpg://... — no application code changes needed.

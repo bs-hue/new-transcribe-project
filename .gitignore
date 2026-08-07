@@ -1,0 +1,54 @@
+# Secrets
+.env
+.env.local
+# Holds the production database password, JWT signing key and Sarvam key.
+.env.production
+# Backups of .env made while reconfiguring — these hold real keys.
+.env.backup*
+.env.*.bak
+# Local assistant session data.
+.claude/
+
+*.pem
+cookies.txt
+
+# Data & media
+data/
+*.db
+*.db-shm
+*.db-wal
+
+# Python
+__pycache__/
+*.py[cod]
+.venv/
+venv/
+*.egg-info/
+.pytest_cache/
+.mypy_cache/
+.ruff_cache/
+.coverage
+htmlcov/
+
+# Node / Vite
+node_modules/
+dist/
+dist-ssr/
+*.local
+npm-debug.log*
+.pnpm-debug.log*
+tsconfig.tsbuildinfo
+*.tsbuildinfo
+
+# Editors / OS
+.DS_Store
+.idea/
+
+# Editor config: personal settings stay local, shared project setup is committed
+# so the project configures itself when opened (Antigravity, VS Code, Cursor,
+# Windsurf — they all read this folder).
+.vscode/*
+!.vscode/extensions.json
+!.vscode/settings.json
+!.vscode/launch.json
+!.vscode/tasks.json

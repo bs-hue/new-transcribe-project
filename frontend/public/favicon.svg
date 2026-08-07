@@ -1,0 +1,14 @@
+<!-- The same mark as the header badge, so the browser tab is recognisable
+     among a row of open tabs. SVG rather than .ico: one file, any size. -->
+<svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 32 32">
+  <rect width="32" height="32" rx="7" fill="#2563eb" />
+  <text
+    x="16"
+    y="22"
+    text-anchor="middle"
+    font-family="system-ui, -apple-system, Segoe UI, Roboto, sans-serif"
+    font-size="19"
+    font-weight="700"
+    fill="#ffffff"
+  >R</text>
+</svg>

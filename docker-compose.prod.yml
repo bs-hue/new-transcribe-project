@@ -1,0 +1,94 @@
+# Production stack: PostgreSQL, the API, the built frontend, and Caddy in front
+# doing HTTPS.
+#
+# Two decisions worth understanding before changing anything here:
+#
+# * **Only Caddy is exposed.** The API and database publish no host ports, so
+#   the database is not reachable from the internet even if its password leaks.
+# * **Everything is served from one origin.** Caddy routes /api to the backend
+#   and everything else to the static frontend, so the browser only ever talks
+#   to one host. That removes CORS from the picture entirely rather than
+#   configuring it — a class of production bug that simply cannot occur.
+#
+# Usage:
+#   cp .env.production.example .env.production   # then fill it in
+#   docker compose -f docker-compose.prod.yml --env-file .env.production up -d
+
+name: research-hub
+
+services:
+  db:
+    image: postgres:16-alpine
+    environment:
+      POSTGRES_DB: ${POSTGRES_DB:-research_hub}
+      POSTGRES_USER: ${POSTGRES_USER:-research_hub}
+      POSTGRES_PASSWORD: ${POSTGRES_PASSWORD:?POSTGRES_PASSWORD must be set}
+    volumes:
+      - db-data:/var/lib/postgresql/data
+    healthcheck:
+      # The API waits for this. Without it, the first deploy races the database
+      # and the migration step fails on a connection refused.
+      test: ["CMD-SHELL", "pg_isready -U ${POSTGRES_USER:-research_hub}"]
+      interval: 5s
+      timeout: 5s
+      retries: 20
+    restart: unless-stopped
+
+  api:
+    build:
+      context: ./backend
+    env_file: .env.production
+    environment:
+      ENVIRONMENT: production
+      DATABASE_URL: postgresql+asyncpg://${POSTGRES_USER:-research_hub}:${POSTGRES_PASSWORD}@db:5432/${POSTGRES_DB:-research_hub}
+      WORK_DIR: /data/work
+      HF_HOME: /data/models
+      # Same-origin in production, so no cross-origin requests are made at all.
+      CORS_ORIGINS: https://${DOMAIN}
+    # Migrations run before the first request is served, and are a no-op when
+    # the schema is already current.
+    command: >
+      sh -c "python -m app.cli migrate &&
+             uvicorn app.main:app --host 0.0.0.0 --port 8000 --proxy-headers --forwarded-allow-ips='*'"
+    depends_on:
+      db:
+        condition: service_healthy
+    volumes:
+      - api-data:/data
+    restart: unless-stopped
+
+  web:
+    build:
+      context: ./frontend
+      args:
+        # Empty means "same origin": the browser requests /api/... from
+        # whatever host served the page, which Caddy then routes to the API.
+        VITE_API_BASE_URL: ""
+    depends_on:
+      - api
+    restart: unless-stopped
+
+  caddy:
+    image: caddy:2-alpine
+    ports:
+      - "80:80"
+      - "443:443"
+    environment:
+      DOMAIN: ${DOMAIN:?DOMAIN must be set}
+      ACME_EMAIL: ${ACME_EMAIL:?ACME_EMAIL must be set}
+    volumes:
+      - ./Caddyfile:/etc/caddy/Caddyfile:ro
+      # Certificates live here. Losing this volume means re-requesting them,
+      # which Let's Encrypt rate-limits — so it is worth backing up.
+      - caddy-data:/data
+      - caddy-config:/config
+    depends_on:
+      - api
+      - web
+    restart: unless-stopped
+
+volumes:
+  db-data:
+  api-data:
+  caddy-data:
+  caddy-config:

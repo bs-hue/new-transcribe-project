@@ -1,0 +1,61 @@
+[build-system]
+requires = ["setuptools>=68"]
+build-backend = "setuptools.build_meta"
+
+[project]
+name = "research-hub-backend"
+version = "1.0.0"
+description = "Content Research Hub — transcription and research collection API"
+requires-python = ">=3.11"
+dependencies = [
+    "fastapi>=0.115",
+    "uvicorn[standard]>=0.32",
+    "pydantic>=2.9",
+    "pydantic-settings>=2.6",
+    "sqlalchemy[asyncio]>=2.0.36",
+    # Schema migrations. A deployment with real data in it cannot use
+    # create_all, so this is a core dependency rather than a deployment extra.
+    "alembic>=1.14",
+    "aiosqlite>=0.20",
+    "greenlet>=3.1",
+    "python-multipart>=0.0.12",
+    "httpx>=0.27",
+    "yt-dlp>=2024.11.4",
+    "python-docx>=1.1.2",
+    "openpyxl>=3.1.5",
+    # Auth
+    "pyjwt>=2.9",
+    "bcrypt>=4.2",
+    # Speech-to-text. Local and free — the Version 1 default, so it is a core
+    # dependency rather than an extra.
+    "faster-whisper>=1.0.3",
+]
+
+[project.optional-dependencies]
+postgres = ["asyncpg>=0.30"]
+dev = [
+    "pytest>=8.3",
+    "pytest-asyncio>=0.24",
+    "ruff>=0.7",
+]
+
+[tool.setuptools.packages.find]
+include = ["app*"]
+
+[tool.setuptools.package-data]
+# The self-test speech clip must ship with the package so `doctor --deep`
+# works from an installed copy and inside the Docker image.
+app = ["assets/*"]
+
+[tool.pytest.ini_options]
+asyncio_mode = "auto"
+testpaths = ["tests"]
+filterwarnings = ["ignore::DeprecationWarning"]
+
+[tool.ruff]
+line-length = 100
+target-version = "py311"
+
+[tool.ruff.lint]
+select = ["E", "F", "I", "UP", "B", "SIM"]
+ignore = ["B008"]  # FastAPI Depends() in defaults is idiomatic

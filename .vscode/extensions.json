@@ -1,0 +1,13 @@
+{
+  // Suggested when the project is opened. Nothing here is required to run the
+  // app — they make editing it pleasant. All free.
+  "recommendations": [
+    "ms-python.python",
+    "ms-python.vscode-pylance",
+    "charliermarsh.ruff",
+    "bradlc.vscode-tailwindcss",
+    "dbaeumer.vscode-eslint",
+    "esbenp.prettier-vscode",
+    "ms-azuretools.vscode-docker"
+  ]
+}

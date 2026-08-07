@@ -1,0 +1,41 @@
+{
+  "version": "0.2.0",
+  // Press F5 (or the Run panel) to start the app with the debugger attached,
+  // so you can pause on a line and inspect what is happening.
+  "configurations": [
+    {
+      "name": "Backend (API + worker)",
+      "type": "debugpy",
+      "request": "launch",
+      "module": "uvicorn",
+      "args": ["app.main:app", "--reload", "--port", "8000"],
+      "cwd": "${workspaceFolder}/backend",
+      "python": "${workspaceFolder}/backend/.venv/bin/python",
+      "windows": { "python": "${workspaceFolder}/backend/.venv/Scripts/python.exe" },
+      "console": "integratedTerminal",
+      "justMyCode": false
+    },
+    {
+      "name": "System check (doctor --deep)",
+      "type": "debugpy",
+      "request": "launch",
+      "module": "app.cli",
+      "args": ["doctor", "--deep"],
+      "cwd": "${workspaceFolder}/backend",
+      "python": "${workspaceFolder}/backend/.venv/bin/python",
+      "windows": { "python": "${workspaceFolder}/backend/.venv/Scripts/python.exe" },
+      "console": "integratedTerminal"
+    },
+    {
+      "name": "Backend tests",
+      "type": "debugpy",
+      "request": "launch",
+      "module": "pytest",
+      "args": ["-q"],
+      "cwd": "${workspaceFolder}/backend",
+      "python": "${workspaceFolder}/backend/.venv/bin/python",
+      "windows": { "python": "${workspaceFolder}/backend/.venv/Scripts/python.exe" },
+      "console": "integratedTerminal"
+    }
+  ]
+}

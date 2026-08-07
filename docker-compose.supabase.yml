@@ -1,0 +1,67 @@
+# Production stack backed by Supabase (or any hosted PostgreSQL).
+#
+# Identical to docker-compose.prod.yml except there is no database container:
+# the database lives at Supabase, so this server runs only the application.
+# The trade-off is deliberate — Supabase handles backups, upgrades and
+# availability; you no longer control where the data physically sits, and every
+# query crosses the internet instead of a Docker network.
+#
+# Usage:
+#   cp .env.production.example .env.production   # then set DATABASE_URL
+#   docker compose -f docker-compose.supabase.yml --env-file .env.production up -d
+#
+# See docs/SUPABASE.md for where the connection string comes from.
+
+name: research-hub
+
+services:
+  api:
+    build:
+      context: ./backend
+    env_file: .env.production
+    environment:
+      ENVIRONMENT: production
+      # Unlike the self-hosted compose file, this is NOT assembled here — it
+      # comes verbatim from .env.production, because only you know your
+      # Supabase host, and it must use the postgresql+asyncpg:// driver.
+      DATABASE_URL: ${DATABASE_URL:?DATABASE_URL must be set — see docs/SUPABASE.md}
+      WORK_DIR: /data/work
+      HF_HOME: /data/models
+      CORS_ORIGINS: https://${DOMAIN}
+    command: >
+      sh -c "python -m app.cli migrate &&
+             uvicorn app.main:app --host 0.0.0.0 --port 8000 --proxy-headers --forwarded-allow-ips='*'"
+    volumes:
+      - api-data:/data
+    restart: unless-stopped
+
+  web:
+    build:
+      context: ./frontend
+      args:
+        VITE_API_BASE_URL: ""
+    depends_on:
+      - api
+    restart: unless-stopped
+
+  caddy:
+    image: caddy:2-alpine
+    ports:
+      - "80:80"
+      - "443:443"
+    environment:
+      DOMAIN: ${DOMAIN:?DOMAIN must be set}
+      ACME_EMAIL: ${ACME_EMAIL:?ACME_EMAIL must be set}
+    volumes:
+      - ./Caddyfile:/etc/caddy/Caddyfile:ro
+      - caddy-data:/data
+      - caddy-config:/config
+    depends_on:
+      - api
+      - web
+    restart: unless-stopped
+
+volumes:
+  api-data:
+  caddy-data:
+  caddy-config:

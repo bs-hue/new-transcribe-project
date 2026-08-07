@@ -1,0 +1,41 @@
+{
+  // Point the editor at the project's own Python, so imports resolve and
+  // "Run tests" works without anyone configuring it by hand.
+  // Windows: change to "${workspaceFolder}/backend/.venv/Scripts/python.exe"
+  "python.defaultInterpreterPath": "${workspaceFolder}/backend/.venv/bin/python",
+  "python.testing.pytestEnabled": true,
+  "python.testing.unittestEnabled": false,
+  "python.testing.pytestArgs": ["backend/tests"],
+  "python.analysis.extraPaths": ["${workspaceFolder}/backend"],
+
+  "[python]": {
+    "editor.defaultFormatter": "charliermarsh.ruff",
+    "editor.formatOnSave": true,
+    "editor.codeActionsOnSave": { "source.organizeImports": "explicit" }
+  },
+
+  "[typescript]": { "editor.defaultFormatter": "esbenp.prettier-vscode" },
+  "[typescriptreact]": { "editor.defaultFormatter": "esbenp.prettier-vscode" },
+  "[json]": { "editor.defaultFormatter": "esbenp.prettier-vscode" },
+
+  "editor.formatOnSave": true,
+  "editor.rulers": [100],
+  "files.trimTrailingWhitespace": true,
+  "files.insertFinalNewline": true,
+
+  // Hide noise so the file tree shows the project, not its build artefacts.
+  "files.exclude": {
+    "**/__pycache__": true,
+    "**/*.egg-info": true,
+    "**/.pytest_cache": true,
+    "**/.ruff_cache": true
+  },
+  "search.exclude": {
+    "**/node_modules": true,
+    "**/.venv": true,
+    "**/dist": true,
+    "**/data": true
+  },
+
+  "tailwindCSS.experimental.classRegex": [["cva\\(([^)]*)\\)", "[\"'`]([^\"'`]*).*?[\"'`]"]]
+}

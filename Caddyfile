@@ -1,0 +1,60 @@
+# HTTPS termination and routing.
+#
+# Caddy obtains and renews Let's Encrypt certificates by itself, provided the
+# domain's DNS already points at this server and ports 80 and 443 are reachable.
+# There is no certbot step and no renewal cron to forget.
+
+{
+	email {$ACME_EMAIL}
+}
+
+{$DOMAIN} {
+	encode zstd gzip
+
+	# Uploading a long video's audio and downloading a combined export are both
+	# slower than Caddy's defaults allow for.
+	request_body {
+		max_size 200MB
+	}
+
+	# The API and its documentation. Everything the frontend calls lives under
+	# /api, so this is the whole backend surface.
+	handle /api/* {
+		reverse_proxy api:8000 {
+			# Transcription is slow by nature. A batch export of many
+			# transcripts can also take a while to render.
+			transport http {
+				response_header_timeout 10m
+				read_timeout 10m
+			}
+		}
+	}
+
+	handle /docs* {
+		reverse_proxy api:8000
+	}
+
+	handle /openapi.json {
+		reverse_proxy api:8000
+	}
+
+	# Everything else is the built React app: static files served by nginx,
+	# which already falls back to index.html so client-side routes work.
+	handle {
+		reverse_proxy web:80
+	}
+
+	header {
+		# Tell browsers to stay on HTTPS for this host.
+		Strict-Transport-Security "max-age=31536000; includeSubDomains"
+		X-Content-Type-Options "nosniff"
+		X-Frame-Options "DENY"
+		Referrer-Policy "strict-origin-when-cross-origin"
+		-Server
+	}
+
+	log {
+		output stdout
+		format console
+	}
+}
