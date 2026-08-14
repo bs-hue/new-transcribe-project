@@ -75,6 +75,7 @@ def _ydl_options(settings: Settings) -> dict[str, Any]:
         "socket_timeout": 30,
         "retries": 2,
         "extract_flat": False,
+        "format": "bestaudio/best",
     }
     if settings.cookies_file:
         options["cookiefile"] = str(settings.cookies_file)
