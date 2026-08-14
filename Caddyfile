@@ -8,7 +8,7 @@
 	email {$ACME_EMAIL}
 }
 
-{$DOMAIN} {
+http://{$DOMAIN} {
 	encode zstd gzip
 
 	# Uploading a long video's audio and downloading a combined export are both
