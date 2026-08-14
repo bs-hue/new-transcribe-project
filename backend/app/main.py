@@ -3,7 +3,13 @@
 from __future__ import annotations
 
 import logging
+import sys
+import asyncio
 from collections.abc import AsyncIterator
+
+if sys.platform == "win32":
+    asyncio.set_event_loop_policy(asyncio.WindowsProactorEventLoopPolicy())
+
 from contextlib import asynccontextmanager
 
 from fastapi import FastAPI, Request

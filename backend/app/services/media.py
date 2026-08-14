@@ -162,24 +162,28 @@ class RealMediaBackend:
 
     async def _run(self, *args: str, error: str) -> bytes:
         """Run a binary with an argument list — never a shell string."""
-        try:
-            process = await asyncio.create_subprocess_exec(
-                *args,
-                stdout=asyncio.subprocess.PIPE,
-                stderr=asyncio.subprocess.PIPE,
-            )
-        except FileNotFoundError as exc:
-            raise AudioExtractionError(
-                f"{args[0]} was not found on PATH. Install ffmpeg to process audio."
-            ) from exc
+        import subprocess
 
-        stdout, stderr = await process.communicate()
-        if process.returncode != 0:
-            detail = stderr.decode("utf-8", "replace").strip().splitlines()
-            raise AudioExtractionError(
-                f"{error}: {detail[-1] if detail else f'exit code {process.returncode}'}"
-            )
-        return stdout
+        def _sync_run() -> bytes:
+            try:
+                result = subprocess.run(
+                    args,
+                    stdout=subprocess.PIPE,
+                    stderr=subprocess.PIPE,
+                )
+            except FileNotFoundError as exc:
+                raise AudioExtractionError(
+                    f"{args[0]} was not found on PATH. Install ffmpeg to process audio."
+                ) from exc
+
+            if result.returncode != 0:
+                detail = result.stderr.decode("utf-8", "replace").strip().splitlines()
+                raise AudioExtractionError(
+                    f"{error}: {detail[-1] if detail else f'exit code {result.returncode}'}"
+                )
+            return result.stdout
+
+        return await anyio.to_thread.run_sync(_sync_run)
 
     async def extract_audio(self, video_path: Path, destination: Path) -> Path:
         destination.mkdir(parents=True, exist_ok=True)
