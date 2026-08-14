@@ -31,7 +31,7 @@ COPY alembic ./alembic
 
 RUN mkdir -p /data/work && useradd --create-home --uid 10001 appuser \
     && chown -R appuser:appuser /data /app
-USER appuser
+# USER appuser
 
 ENV DATABASE_URL=sqlite+aiosqlite:////data/app.db \
     WORK_DIR=/data/work \
