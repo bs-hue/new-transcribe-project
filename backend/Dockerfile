@@ -3,7 +3,7 @@ FROM python:3.11-slim
 # ffmpeg is a hard runtime dependency: audio extraction and chunking shell out
 # to it. Everything else comes from pip.
 RUN apt-get update \
-    && apt-get install -y --no-install-recommends ffmpeg curl \
+    && apt-get install -y --no-install-recommends ffmpeg curl nodejs \
     && rm -rf /var/lib/apt/lists/*
 
 # Coolify and most CI systems expose the commit being built. Passing it in
