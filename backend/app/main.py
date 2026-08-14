@@ -35,7 +35,19 @@ async def lifespan(app: FastAPI) -> AsyncIterator[None]:
     settings = get_settings()
     configure_logging(settings.log_level)
 
-    # Refuse to start in production with the shipped JWT signing key — an
+    if settings.youtube_cookies_text:
+        cookies_path = settings.resolved_work_dir() / "youtube_cookies.txt"
+        
+        text = settings.youtube_cookies_text
+        # If Coolify flattened the text into a single line, try to restore the newlines
+        if "# Netscape HTTP Cookie File" in text and text.count("\n") == 0:
+            text = text.replace(" # ", "\n# ").replace(" .youtube.com", "\n.youtube.com")
+            
+        cookies_path.write_text(text, encoding="utf-8")
+        settings.cookies_file = cookies_path
+        logger.info("Wrote YOUTUBE_COOKIES_TEXT to %s", cookies_path)
+
+    # Refuse to start in production with the shipped JWT signing key â€” an
     # unchanged secret lets anyone mint a token for themselves.
     check_secret(settings)
 
@@ -56,7 +68,7 @@ async def lifespan(app: FastAPI) -> AsyncIterator[None]:
         pool = WorkerPool(settings)
         await pool.start()
     else:
-        logger.info("WORKER_ENABLED=false — run workers with: python -m app.workers.runner")
+        logger.info("WORKER_ENABLED=false â€” run workers with: python -m app.workers.runner")
 
     try:
         yield
@@ -86,7 +98,7 @@ def create_app() -> FastAPI:
         allow_methods=["*"],
         allow_headers=["*"],
         # Exports are fetched with an Authorization header rather than a plain
-        # link, so the browser reads the filename from this header — and a
+        # link, so the browser reads the filename from this header â€” and a
         # cross-origin response hides it unless it is explicitly exposed.
         expose_headers=["Content-Disposition"],
     )

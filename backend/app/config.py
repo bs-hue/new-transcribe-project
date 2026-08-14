@@ -45,7 +45,7 @@ class Settings(BaseSettings):
     # means anyone can mint a valid token for themselves.
     jwt_secret: str = "change-me-in-production"
     jwt_algorithm: str = "HS256"
-    access_token_expire_minutes: int = 720  # 12 hours — one working day
+    access_token_expire_minutes: int = 720  # 12 hours â€” one working day
     # Creates the first admin at startup when the user table is empty, so a fresh
     # deployment is usable without a shell.
     bootstrap_admin_email: str | None = None
@@ -53,13 +53,13 @@ class Settings(BaseSettings):
 
     # Who may create an account.
     #
-    # * ``closed``   — nobody. An administrator adds accounts. The default,
+    # * ``closed``   â€” nobody. An administrator adds accounts. The default,
     #   because a tool that quietly accepts strangers is worse than one that
     #   makes you turn that on deliberately.
-    # * ``approval`` — anyone may apply, and waits for an administrator. Sign-up
+    # * ``approval`` â€” anyone may apply, and waits for an administrator. Sign-up
     #   costs nothing until approved, which is what keeps a public sign-up page
     #   from spending your transcription budget.
-    # * ``open``     — anyone may sign up and use it immediately. Only sensible
+    # * ``open``     â€” anyone may sign up and use it immediately. Only sensible
     #   once per-account limits exist, since transcription costs real money.
     registration_mode: Literal["closed", "approval", "open"] = "closed"
 
@@ -80,21 +80,21 @@ class Settings(BaseSettings):
     transcription_provider: str = "faster_whisper"
     transcription_language: str | None = None
     # `small` rather than `base`: on English `base` is adequate, but on Hindi and
-    # other Indic languages it is close to unusable — roughly half the words come
+    # other Indic languages it is close to unusable â€” roughly half the words come
     # back wrong. `small` is the smallest model that produces work anyone would
     # actually use for those languages, and is the honest default for an agency
     # researching Indian content.
     faster_whisper_model: str = "small"
     faster_whisper_device: str = "auto"
     # "default" means float32 on CPU, which is two to four times slower than int8
-    # for a barely measurable accuracy difference. Resolved at load time — see
+    # for a barely measurable accuracy difference. Resolved at load time â€” see
     # services/transcription/faster_whisper.py.
     faster_whisper_compute_type: str = "default"
     #: 0 lets the provider divide the machine's cores between the workers.
     faster_whisper_cpu_threads: int = 0
     #: Higher searches more alternatives: slower, slightly more accurate.
     faster_whisper_beam_size: int = 5
-    #: Words the model is told to expect — brand names, product names, jargon.
+    #: Words the model is told to expect â€” brand names, product names, jargon.
     #: Whisper guesses from sound alone, so an unfamiliar word becomes whatever
     #: it sounds nearest to. Naming them in advance fixes exactly that.
     transcription_vocabulary: str | None = None
@@ -114,7 +114,7 @@ class Settings(BaseSettings):
     sarvam_timeout_seconds: float = 120.0
 
     #: How many windows of audio automatic detection listens to before deciding.
-    #: The library's default is one — a single 30-second window — so a Reel that
+    #: The library's default is one â€” a single 30-second window â€” so a Reel that
     #: opens on music or an English word gets the whole video's language wrong.
     #: Sampling several and taking the confident answer is far steadier.
     faster_whisper_language_detection_segments: int = 4
@@ -130,6 +130,7 @@ class Settings(BaseSettings):
     ffprobe_binary: str = "ffprobe"
     keep_media: bool = False
     cookies_file: Path | None = None
+    youtube_cookies_text: str | None = None
 
     # --- Worker ---
     worker_enabled: bool = True
@@ -170,7 +171,7 @@ class Settings(BaseSettings):
         """Accept "Hindi" here as well as in the app.
 
         Whisper needs "hi", and treats anything it does not recognise as no
-        language at all — falling back to detection without a word of complaint.
+        language at all â€” falling back to detection without a word of complaint.
         Writing the language's own name into the settings file is the obvious
         thing to do, so it has to work rather than silently do nothing.
         """
@@ -180,7 +181,7 @@ class Settings(BaseSettings):
 
         try:
             return normalise(value)
-        except Exception:  # noqa: BLE001 — a bad value must not stop startup
+        except Exception:  # noqa: BLE001 â€” a bad value must not stop startup
             return None
 
     @property
