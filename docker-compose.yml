@@ -1,61 +1,67 @@
+# Production stack backed by Supabase (or any hosted PostgreSQL).
+#
+# Identical to docker-compose.prod.yml except there is no database container:
+# the database lives at Supabase, so this server runs only the application.
+# The trade-off is deliberate — Supabase handles backups, upgrades and
+# availability; you no longer control where the data physically sits, and every
+# query crosses the internet instead of a Docker network.
+#
+# Usage:
+#   cp .env.production.example .env.production   # then set DATABASE_URL
+#   docker compose -f docker-compose.supabase.yml --env-file .env.production up -d
+#
+# See docs/SUPABASE.md for where the connection string comes from.
+
+name: research-hub
+
 services:
   api:
     build:
       context: ./backend
-      args:
-        # Coolify sets SOURCE_COMMIT. Anywhere else it is simply "unknown".
-        BUILD_COMMIT: ${SOURCE_COMMIT:-unknown}
-    env_file: .env
+    env_file: .env.production
     environment:
-      # Container-internal paths override whatever .env says about local dirs.
-      #
-      # The database is the exception: set EXTERNAL_DATABASE_URL in .env to run
-      # against a hosted PostgreSQL (Supabase) instead of the local file.
-      #
-      # Deliberately NOT named DATABASE_URL. That name is already used in .env
-      # for running without Docker, where it points at a path on your machine —
-      # letting it through here would quietly send the container to the wrong
-      # file and make existing transcripts look like they had vanished.
-      DATABASE_URL: ${EXTERNAL_DATABASE_URL:-sqlite+aiosqlite:////data/app.db}
+      ENVIRONMENT: production
+      # Unlike the self-hosted compose file, this is NOT assembled here — it
+      # comes verbatim from .env.production, because only you know your
+      # Supabase host, and it must use the postgresql+asyncpg:// driver.
+      DATABASE_URL: ${DATABASE_URL:?DATABASE_URL must be set — see docs/SUPABASE.md}
       WORK_DIR: /data/work
-      # Whisper models land here so they survive a container rebuild instead of
-      # being re-downloaded (~150 MB for `base`).
       HF_HOME: /data/models
-      # The site and the API share one origin (nginx proxies /api), so there is
-      # no cross-origin request to permit in normal use. PUBLIC_URL is still
-      # honoured for anyone putting the API on its own hostname.
-      CORS_ORIGINS: ${PUBLIC_URL:-http://localhost:${WEB_PORT:-3000}}
+      CORS_ORIGINS: https://${DOMAIN}
+    command: >
+      sh -c "python -m app.cli migrate &&
+             uvicorn app.main:app --host 0.0.0.0 --port 8000 --proxy-headers --forwarded-allow-ips='*'"
     volumes:
       - api-data:/data
-    # Published for local development and for `doctor`. In production the API
-    # does not need to be reachable from outside at all — the site proxies to
-    # it over the private network between the two containers.
-    ports:
-      - "${API_PORT:-8000}:8000"
     restart: unless-stopped
 
   web:
     build:
       context: ./frontend
       args:
-        # The API's address, compiled into the page at build time.
-        #
-        # This was empty — meaning "same origin" — while nginx forwarded /api to
-        # the api service. That proxy was removed so the frontend can be
-        # deployed on its own in Coolify, which leaves nginx answering /api with
-        # index.html: an HTTP 200 containing a web page where the app expects
-        # JSON, which fails in a way that does not look like a failure.
-        #
-        # So locally the browser is pointed straight at the api container's
-        # published port. CORS_ORIGINS above already allows this origin.
-        VITE_API_BASE_URL: http://localhost:${API_PORT:-8000}
+        VITE_API_BASE_URL: ""
     depends_on:
       - api
+    restart: unless-stopped
+
+  caddy:
+    image: caddy:2-alpine
     ports:
-      - "${WEB_PORT:-3000}:80"
+      - "80:80"
+      - "443:443"
+    environment:
+      DOMAIN: ${DOMAIN:?DOMAIN must be set}
+      ACME_EMAIL: ${ACME_EMAIL:?ACME_EMAIL must be set}
+    volumes:
+      - ./Caddyfile:/etc/caddy/Caddyfile:ro
+      - caddy-data:/data
+      - caddy-config:/config
+    depends_on:
+      - api
+      - web
     restart: unless-stopped
 
 volumes:
   api-data:
-# For production, swap SQLite for Postgres by adding a `db` service and setting
-# DATABASE_URL=postgresql+asyncpg://... — no application code changes needed.
+  caddy-data:
+  caddy-config:
