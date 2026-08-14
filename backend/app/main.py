@@ -42,6 +42,7 @@ async def lifespan(app: FastAPI) -> AsyncIterator[None]:
         # If Coolify flattened the text into a single line, try to restore the newlines
         if "# Netscape HTTP Cookie File" in text and text.count("\n") == 0:
             text = text.replace(" # ", "\n# ").replace(" .youtube.com", "\n.youtube.com")
+            text = text.replace("    ", "\t")
             
         cookies_path.write_text(text, encoding="utf-8")
         settings.cookies_file = cookies_path
