@@ -2,7 +2,7 @@ import time
 import requests
 import random
 import logging
-from app.config import settings
+from app.config import get_settings
 
 logger = logging.getLogger(__name__)
 
@@ -12,6 +12,8 @@ CACHE_TTL = 3600  # Cache proxy list for 1 hour
 
 def get_random_proxy() -> str | None:
     global _cached_proxies, _last_fetch_time
+
+    settings = get_settings()
 
     # If they didn't provide a token, fallback to the hardcoded string
     if not settings.webshare_token:
