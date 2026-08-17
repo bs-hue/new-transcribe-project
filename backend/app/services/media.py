@@ -96,8 +96,6 @@ class RealMediaBackend:
             "nopart": True,
             "extractor_args": {"youtube": ["client=android,ios"]},
         }
-        if self.settings.cookies_file:
-            options["cookiefile"] = str(self.settings.cookies_file)
         from app.services.proxy import get_random_proxy
         proxy = get_random_proxy()
         if proxy:

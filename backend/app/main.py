@@ -35,29 +35,6 @@ async def lifespan(app: FastAPI) -> AsyncIterator[None]:
     settings = get_settings()
     configure_logging(settings.log_level)
 
-    if settings.youtube_cookies_text:
-        cookies_path = settings.resolved_work_dir() / "youtube_cookies.txt"
-        
-        text = settings.youtube_cookies_text
-        # If Coolify flattened the text into a single line, try to restore the newlines
-        if "# Netscape HTTP Cookie File" in text and text.count("\n") == 0:
-            text = text.replace(" # ", "\n# ").replace(" .youtube.com", "\n.youtube.com")
-            
-        # Ensure fields are separated by exactly one tab (browsers/Coolify often convert tabs to spaces)
-        import re
-        lines = []
-        for line in text.splitlines():
-            if line.startswith("#") or not line.strip():
-                lines.append(line)
-            else:
-                # Split on whitespace exactly 6 times, joining with tabs
-                parts = re.split(r'\s+', line.strip(), maxsplit=6)
-                lines.append("\t".join(parts))
-        text = "\n".join(lines)
-        
-        cookies_path.write_text(text, encoding="utf-8")
-        settings.cookies_file = cookies_path
-        logger.info("Wrote YOUTUBE_COOKIES_TEXT to %s", cookies_path)
 
     # Refuse to start in production with the shipped JWT signing key â€” an
     # unchanged secret lets anyone mint a token for themselves.

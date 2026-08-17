@@ -77,8 +77,6 @@ def _ydl_options(settings: Settings) -> dict[str, Any]:
         "extract_flat": True,
         "extractor_args": {"youtube": ["client=android,ios"]},
     }
-    if settings.cookies_file:
-        options["cookiefile"] = str(settings.cookies_file)
     from app.services.proxy import get_random_proxy
     proxy = get_random_proxy()
     if proxy:

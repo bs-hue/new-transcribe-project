@@ -129,8 +129,6 @@ class Settings(BaseSettings):
     ffmpeg_binary: str = "ffmpeg"
     ffprobe_binary: str = "ffprobe"
     keep_media: bool = False
-    cookies_file: Path | None = None
-    youtube_cookies_text: str | None = None
     youtube_proxy: Optional[str] = None
     webshare_token: Optional[str] = None
 
