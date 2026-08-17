@@ -146,12 +146,7 @@ class Settings(BaseSettings):
             return [item.strip() for item in value.split(",") if item.strip()]
         return value
 
-    @field_validator("cookies_file", mode="before")
-    @classmethod
-    def _empty_path_is_none(cls, value: object) -> object:
-        if isinstance(value, str) and not value.strip():
-            return None
-        return value
+
 
     @field_validator(
         "transcription_language",
