@@ -99,7 +99,10 @@ class RealMediaBackend:
         if self.settings.cookies_file:
             options["cookiefile"] = str(self.settings.cookies_file)
         if self.settings.youtube_proxy:
-            options["proxy"] = self.settings.youtube_proxy
+            import random
+            proxies = [p.strip() for p in self.settings.youtube_proxy.split(",") if p.strip()]
+            if proxies:
+                options["proxy"] = random.choice(proxies)
         return options
 
     def _download_sync(self, url: str, destination: Path, hook: Callable[[dict], None]) -> Path:
