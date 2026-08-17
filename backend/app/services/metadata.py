@@ -79,11 +79,10 @@ def _ydl_options(settings: Settings) -> dict[str, Any]:
     }
     if settings.cookies_file:
         options["cookiefile"] = str(settings.cookies_file)
-    if settings.youtube_proxy:
-        import random
-        proxies = [p.strip() for p in settings.youtube_proxy.split(",") if p.strip()]
-        if proxies:
-            options["proxy"] = random.choice(proxies)
+    from app.services.proxy import get_random_proxy
+    proxy = get_random_proxy()
+    if proxy:
+        options["proxy"] = proxy
     return options
 
 
