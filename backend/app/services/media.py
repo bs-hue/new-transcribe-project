@@ -94,7 +94,6 @@ class RealMediaBackend:
             "fragment_retries": 3,
             "progress_hooks": [hook],
             "nopart": True,
-            "source_address": "0.0.0.0",
             "extractor_args": {"youtube": ["client=android,ios"]},
         }
         if self.settings.cookies_file:

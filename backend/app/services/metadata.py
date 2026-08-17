@@ -75,7 +75,6 @@ def _ydl_options(settings: Settings) -> dict[str, Any]:
         "socket_timeout": 30,
         "retries": 2,
         "extract_flat": True,
-        "source_address": "0.0.0.0",
         "extractor_args": {"youtube": ["client=android,ios"]},
     }
     if settings.cookies_file:
