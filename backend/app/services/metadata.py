@@ -80,6 +80,8 @@ def _ydl_options(settings: Settings) -> dict[str, Any]:
     }
     if settings.cookies_file:
         options["cookiefile"] = str(settings.cookies_file)
+    if settings.youtube_proxy:
+        options["proxy"] = settings.youtube_proxy
     return options
 
 

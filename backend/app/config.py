@@ -131,6 +131,7 @@ class Settings(BaseSettings):
     keep_media: bool = False
     cookies_file: Path | None = None
     youtube_cookies_text: str | None = None
+    youtube_proxy: str | None = None
 
     # --- Worker ---
     worker_enabled: bool = True
