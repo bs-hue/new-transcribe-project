@@ -3,6 +3,7 @@ import httpx
 import random
 import logging
 from app.config import get_settings
+from app.core.errors import AppError
 
 logger = logging.getLogger(__name__)
 
@@ -51,8 +52,9 @@ def get_random_proxy() -> str | None:
                 logger.info(f"Successfully cached {len(_cached_proxies)} proxies.")
         except Exception as e:
             logger.error(f"Failed to fetch proxies from Webshare: {e}")
+            raise AppError(f"Failed to fetch proxies from Webshare API: {e}")
             
     if _cached_proxies:
         return random.choice(_cached_proxies)
     
-    return None
+    raise AppError("Webshare API returned no proxies.")
