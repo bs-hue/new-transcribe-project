@@ -279,7 +279,11 @@ async def fetch_metadata(parsed: ParsedURL, settings: Settings | None = None) ->
     import asyncio
     settings = settings or get_settings()
     
-    # We intentionally use yt-dlp for metadata preview to save Apify costs.
+    # Fast path: If Apify is configured for YouTube, we bypass yt-dlp entirely 
+    # to avoid proxy blocks during the Check phase. We use YouTube's public 
+    # oEmbed API for instant, unblockable metadata (Title, Thumbnail, Author).
+    if parsed.platform == "youtube" and settings.apify_api_token:
+        return await _fetch_youtube_oembed_metadata(parsed)
     
     try:
         info = await asyncio.wait_for(
@@ -311,49 +315,38 @@ async def fetch_metadata(parsed: ParsedURL, settings: Settings | None = None) ->
         raw=_slim_raw(info),
     )
 
-async def _fetch_youtube_apify_metadata(parsed: ParsedURL, settings: Settings) -> VideoMetadata:
+async def _fetch_youtube_oembed_metadata(parsed: ParsedURL) -> VideoMetadata:
     import httpx
     
-    # We call the exact same endpoint. Since Apify caches identical runs, 
-    # it usually doesn't double-bill or double-download if the URL and quality are the same within a short time.
-    api_url = f"https://api.apify.com/v2/acts/epctex~youtube-video-downloader/run-sync-get-dataset-items"
-    params = {"token": settings.apify_api_token}
+    # YouTube's official public oEmbed API. No proxy or auth needed!
+    api_url = "https://www.youtube.com/oembed"
+    params = {"url": parsed.canonical_url, "format": "json"}
     
-    payload = {
-        "startUrls": [parsed.canonical_url],
-        "quality": "360" # Lowest setting to save Apify compute costs
-    }
-
-    logger.info("Calling Apify to resolve YouTube metadata...")
-    async with httpx.AsyncClient(timeout=300) as client:
+    async with httpx.AsyncClient(timeout=10.0) as client:
         try:
-            response = await client.post(api_url, params=params, json=payload)
-            if response.status_code != 200 and response.status_code != 201:
-                raise MetadataError(f"Apify YouTube Downloader failed (HTTP {response.status_code}): {response.text}")
+            response = await client.get(api_url, params=params)
+            response.raise_for_status()
             data = response.json()
+        except httpx.HTTPStatusError as e:
+            if e.response.status_code == 404:
+                raise VideoUnavailableError("This video is unavailable or private.")
+            raise MetadataError(f"YouTube oEmbed failed (HTTP {e.response.status_code})")
         except httpx.RequestError as e:
-            raise MetadataError(f"Apify connection failed: {str(e)}")
+            raise MetadataError(f"YouTube oEmbed connection failed: {str(e)}")
 
-    if not data or not isinstance(data, list) or len(data) == 0:
-        raise MetadataError("Apify returned success, but no dataset items were found.")
-
-    item = data[0]
-    
     return VideoMetadata(
         platform=parsed.platform,
-        platform_video_id=item.get("id") or parsed.video_id or "unknown",
-        canonical_url=item.get("url") or parsed.canonical_url,
+        platform_video_id=parsed.video_id or "unknown",
+        canonical_url=parsed.canonical_url,
         source_url=parsed.original_url,
-        title=item.get("title") or "YouTube Video (Apify)",
-        description=item.get("description"),
-        author=item.get("channelName") or "YouTube User",
-        author_url=None,
-        thumbnail_url=item.get("thumbnailUrl") or item.get("thumbnail"),
-        duration_seconds=float(item["duration"]) if item.get("duration") else None,
-        estimated_size_bytes=int(item["fileSize"]) if item.get("fileSize") else None,
-        view_count=int(item["viewCount"]) if item.get("viewCount") else None,
+        title=data.get("title") or "YouTube Video",
+        author=data.get("author_name") or "YouTube User",
+        author_url=data.get("author_url"),
+        thumbnail_url=data.get("thumbnail_url"),
+        duration_seconds=None, # oEmbed does not provide duration
+        estimated_size_bytes=None,
+        view_count=None,
         like_count=None,
-        published_at=None,
         is_live=False,
-        raw={"apify": True, "actor": "epctex/youtube-video-downloader"},
+        raw={"oembed": True},
     )
