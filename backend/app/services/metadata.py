@@ -279,9 +279,7 @@ async def fetch_metadata(parsed: ParsedURL, settings: Settings | None = None) ->
     import asyncio
     settings = settings or get_settings()
     
-    # Fast path for Apify YouTube
-    if parsed.platform == "youtube" and settings.apify_api_token:
-        return await _fetch_youtube_apify_metadata(parsed, settings)
+    # We intentionally use yt-dlp for metadata preview to save Apify costs.
     
     try:
         info = await asyncio.wait_for(

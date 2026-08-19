@@ -365,9 +365,9 @@ _backend: MediaBackend | None = None
 
 def get_media_backend(settings: Settings | None = None) -> MediaBackend:
     global _backend
-    if _backend is None:
-        _backend = RealMediaBackend(settings)
-    return _backend
+    if _backend is not None:
+        return _backend
+    return RealMediaBackend(settings)
 
 
 def set_media_backend(backend: MediaBackend | None) -> None:
