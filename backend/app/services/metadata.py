@@ -323,7 +323,7 @@ async def _fetch_youtube_apify_metadata(parsed: ParsedURL, settings: Settings) -
     
     payload = {
         "startUrls": [parsed.canonical_url],
-        "quality": "720p" # Default setting, just to get metadata
+        "quality": "720" # Default setting, just to get metadata
     }
 
     logger.info("Calling Apify to resolve YouTube metadata...")
