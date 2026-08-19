@@ -42,7 +42,7 @@ def get_random_proxy() -> str | None:
             for p in data.get("results", []):
                 # Include username/password so it works locally. 
                 # On Coolify (where your IP is whitelisted), Webshare will just ignore the password and let you through anyway!
-                proxy_str = f"http://{p['username']}:{p['password']}@{p['proxy_address']}:{p['port']}/"
+                proxy_str = f"http://{p['username']}:{p['password']}@{p['proxy_address']}:{p['port']}"
                 new_proxies.append(proxy_str)
                 
             if new_proxies:
