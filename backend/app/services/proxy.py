@@ -1,5 +1,5 @@
 import time
-import requests
+import httpx
 import random
 import logging
 from app.config import get_settings
@@ -30,13 +30,13 @@ def get_random_proxy() -> str | None:
         try:
             logger.info("Fetching fresh proxies from Webshare API...")
             headers = {"Authorization": f"Token {settings.webshare_token}"}
-            r = requests.get(
-                "https://proxy.webshare.io/api/v2/proxy/list/?mode=direct", 
-                headers=headers, 
-                timeout=10
-            )
-            r.raise_for_status()
-            data = r.json()
+            with httpx.Client(timeout=10) as client:
+                r = client.get(
+                    "https://proxy.webshare.io/api/v2/proxy/list/?mode=direct", 
+                    headers=headers
+                )
+                r.raise_for_status()
+                data = r.json()
             
             new_proxies = []
             for p in data.get("results", []):
