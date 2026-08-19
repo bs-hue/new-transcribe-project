@@ -76,7 +76,7 @@ def _ydl_options(settings: Settings) -> dict[str, Any]:
         "force_ipv4": True,
         "legacy_server_connect": True,
         "socket_timeout": 30,
-        "retries": 2,
+        "retries": 0,
         "extract_flat": True,
     }
     from app.services.proxy import get_random_proxy

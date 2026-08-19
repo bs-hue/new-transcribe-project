@@ -90,7 +90,7 @@ class RealMediaBackend:
             # so downloading 4K video would waste bandwidth and disk for nothing.
             "format": "bestaudio/best[height<=720]/best",
             "socket_timeout": 30,
-            "retries": 3,
+            "retries": 0,
             "fragment_retries": 3,
             "progress_hooks": [hook],
             "nopart": True,
