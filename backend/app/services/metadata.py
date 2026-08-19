@@ -78,7 +78,6 @@ def _ydl_options(settings: Settings) -> dict[str, Any]:
         "socket_timeout": 30,
         "retries": 2,
         "extract_flat": True,
-        "extractor_args": {"youtube": ["client=android,ios"]},
     }
     from app.services.proxy import get_random_proxy
     proxy = get_random_proxy()
