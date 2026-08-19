@@ -95,6 +95,14 @@ class RealMediaBackend:
             "progress_hooks": [hook],
             "nopart": True,
         }
+
+        # If the user has generated an OAuth2 token using oauth_login.py, use it!
+        token_file = Path("/data/yt-dlp/youtube_oauth2_tokens.json")
+        if token_file.exists():
+            options["username"] = "oauth2"
+            options["password"] = ""
+            options["cache_dir"] = "/data/yt-dlp"
+
         from app.services.proxy import get_random_proxy
         proxy = get_random_proxy()
         if proxy:

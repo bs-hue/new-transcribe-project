@@ -73,12 +73,18 @@ def _ydl_options(settings: Settings) -> dict[str, Any]:
         "noplaylist": True,
         "skip_download": True,
         "nocheckcertificate": True,
-        "force_ipv4": True,
-        "legacy_server_connect": True,
-        "socket_timeout": 30,
         "retries": 0,
         "extract_flat": True,
     }
+
+    # If the user has generated an OAuth2 token using oauth_login.py, use it!
+    # This prevents the UI from hanging waiting for a terminal login if the token doesn't exist.
+    token_file = Path("/data/yt-dlp/youtube_oauth2_tokens.json")
+    if token_file.exists():
+        options["username"] = "oauth2"
+        options["password"] = ""
+        options["cache_dir"] = "/data/yt-dlp"
+
     from app.services.proxy import get_random_proxy
     proxy = get_random_proxy()
     if proxy:
