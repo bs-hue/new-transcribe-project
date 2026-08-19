@@ -29,6 +29,54 @@ from app.services.settings_store import effective_settings
 
 router = APIRouter(prefix="/videos", tags=["videos"])
 
+@router.get("/debug-proxy")
+async def debug_proxy(settings: AppSettings):
+    import httpx
+    import traceback
+    
+    debug_log = []
+    
+    # Step 1: Check token
+    if not settings.webshare_token:
+        debug_log.append("ERROR: WEBSHARE_TOKEN is empty in environment.")
+        return {"status": "failed_at_token", "log": debug_log}
+    
+    debug_log.append(f"WEBSHARE_TOKEN is set: {settings.webshare_token[:5]}***")
+    
+    # Step 2: Fetch proxies
+    try:
+        debug_log.append("Fetching proxies from Webshare API...")
+        headers = {"Authorization": f"Token {settings.webshare_token}"}
+        async with httpx.AsyncClient(timeout=10) as client:
+            r = await client.get("https://proxy.webshare.io/api/v2/proxy/list/?mode=direct", headers=headers)
+            r.raise_for_status()
+            data = r.json()
+            results = data.get("results", [])
+            debug_log.append(f"SUCCESS: Fetched {len(results)} proxies.")
+            if not results:
+                return {"status": "no_proxies", "log": debug_log}
+            
+            p = results[0]
+            proxy_url = f"http://{p['username']}:{p['password']}@{p['proxy_address']}:{p['port']}"
+            debug_log.append(f"Selected proxy: {p['proxy_address']}:{p['port']}")
+    except Exception as e:
+        debug_log.append(f"ERROR fetching proxies: {e}")
+        debug_log.append(traceback.format_exc())
+        return {"status": "failed_at_webshare_api", "log": debug_log}
+        
+    # Step 3: Test proxy against YouTube
+    try:
+        debug_log.append("Testing proxy connection to YouTube...")
+        async with httpx.AsyncClient(proxy=proxy_url, timeout=15) as client:
+            r = await client.get("https://www.youtube.com")
+            debug_log.append(f"SUCCESS: YouTube returned HTTP {r.status_code}")
+            return {"status": "success", "log": debug_log}
+    except Exception as e:
+        debug_log.append(f"ERROR connecting to YouTube via proxy: {e}")
+        debug_log.append(traceback.format_exc())
+        return {"status": "failed_at_youtube", "log": debug_log}
+
+
 #: Preview probes the platform per URL. Fanning out unbounded would get us
 #: rate-limited; four at a time keeps a 20-URL paste responsive without that.
 _PREVIEW_CONCURRENCY = 4
