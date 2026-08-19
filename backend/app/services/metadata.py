@@ -83,6 +83,109 @@ def _ydl_options(settings: Settings) -> dict[str, Any]:
         options["proxy"] = proxy
     return options
 
+
+def _classify_and_raise(url: str, message: str) -> None:
+    lowered = message.lower()
+    if any(phrase in lowered for phrase in _PERMANENT_FAILURES):
+        raise VideoUnavailableError(
+            "This video is unavailable — it may be private, deleted, or region-locked.",
+            details={"url": url, "provider_message": message},
+        )
+    if any(phrase in lowered for phrase in _LOGIN_REQUIRED):
+        raise VideoUnavailableError(
+            "This video requires an authenticated session. Configure COOKIES_FILE "
+            "with a logged-in cookie export and try again.",
+            details={"url": url, "provider_message": message},
+        )
+    raise MetadataError(
+        f"Could not read video metadata: {message}",
+        details={"url": url},
+    )
+
+
+def _estimate_size(info: dict[str, Any]) -> int | None:
+    """Best available size estimate, in bytes.
+
+    yt-dlp reports size in three descending qualities: an exact ``filesize``, an
+    ``filesize_approx``, or nothing at all — in which case bitrate × duration is
+    a good enough estimate to decide whether something busts a limit.
+    """
+    for key in ("filesize", "filesize_approx"):
+        value = info.get(key)
+        if isinstance(value, (int, float)) and value > 0:
+            return int(value)
+
+    # Sum the selected video + audio streams when only per-format sizes exist.
+    requested = info.get("requested_formats") or []
+    if requested:
+        total = 0
+        for fmt in requested:
+            size = fmt.get("filesize") or fmt.get("filesize_approx")
+            if not size:
+                total = 0
+                break
+            total += int(size)
+        if total:
+            return total
+
+    duration = info.get("duration")
+    total_bitrate = info.get("tbr")  # kbit/s
+    if duration and total_bitrate:
+        return int(float(duration) * float(total_bitrate) * 1000 / 8)
+
+    # Largest per-format estimate is better than claiming we know nothing.
+    sizes = [
+        int(f["filesize"] or f.get("filesize_approx") or 0)
+        for f in (info.get("formats") or [])
+        if f.get("filesize") or f.get("filesize_approx")
+    ]
+    return max(sizes) if sizes else None
+
+
+def _parse_upload_date(info: dict[str, Any]) -> datetime | None:
+    timestamp = info.get("timestamp")
+    if isinstance(timestamp, (int, float)):
+        return datetime.fromtimestamp(timestamp, tz=UTC)
+    raw_date = info.get("upload_date")  # "YYYYMMDD"
+    if isinstance(raw_date, str) and len(raw_date) == 8 and raw_date.isdigit():
+        try:
+            return datetime.strptime(raw_date, "%Y%m%d").replace(tzinfo=UTC)
+        except ValueError:
+            return None
+    return None
+
+
+def _best_thumbnail(info: dict[str, Any]) -> str | None:
+    if info.get("thumbnail"):
+        return info["thumbnail"]
+    thumbnails = info.get("thumbnails") or []
+    if not thumbnails:
+        return None
+    # yt-dlp orders thumbnails worst-to-best; the last with a URL is the best.
+    for thumb in reversed(thumbnails):
+        if thumb.get("url"):
+            return thumb["url"]
+    return None
+
+
+def _slim_raw(info: dict[str, Any]) -> dict[str, Any]:
+    """Keep the fields worth persisting.
+
+    The full yt-dlp payload includes every format variant and can be hundreds of
+    kilobytes per video — too much to store per row. These are the fields V2/V3
+    will plausibly mine (hashtags, engagement, categories).
+    """
+    keys = (
+        "id", "title", "description", "duration", "view_count", "like_count",
+        "comment_count", "repost_count", "channel", "channel_id", "channel_url",
+        "channel_follower_count", "uploader", "uploader_id", "uploader_url",
+        "upload_date", "timestamp", "categories", "tags", "webpage_url",
+        "extractor_key", "language", "age_limit", "availability", "live_status",
+        "width", "height", "fps", "resolution", "aspect_ratio",
+    )
+    return {key: info[key] for key in keys if key in info and info[key] is not None}
+
+
 def _extract_sync(url: str, settings: Settings) -> dict[str, Any]:
     try:
         import yt_dlp
