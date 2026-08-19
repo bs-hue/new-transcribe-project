@@ -213,12 +213,29 @@ def _extract_sync(url: str, settings: Settings) -> dict[str, Any]:
                 continue  # Retry with a new rotating proxy IP
             
             # If it's a permanent error or we ran out of retries, throw it.
-            _classify_and_raise(url, str(exc))
+            if attempt == 4:
+                pass # Handled below
+            else:
+                _classify_and_raise(url, str(exc))
 
     if info is None:
         if last_exc:
-            _classify_and_raise(url, str(last_exc))
-        raise MetadataError("The platform returned no metadata for this URL.", details={"url": url})
+            message = str(last_exc).lower()
+            if any(phrase in message for phrase in _LOGIN_REQUIRED):
+                logger.warning("All proxy attempts blocked by YouTube. Falling back to direct connection (NO PROXY)...")
+                try:
+                    fallback_opts = _ydl_options(settings)
+                    if "proxy" in fallback_opts:
+                        del fallback_opts["proxy"]
+                    with yt_dlp.YoutubeDL(fallback_opts) as ydl:
+                        info = ydl.extract_info(url, download=False)
+                except Exception as fallback_exc:
+                    _classify_and_raise(url, str(fallback_exc))
+            else:
+                _classify_and_raise(url, str(last_exc))
+        
+        if info is None:
+            raise MetadataError("The platform returned no metadata for this URL.", details={"url": url})
 
     # A playlist slipped through despite noplaylist — take the first entry.
     if info.get("_type") == "playlist":

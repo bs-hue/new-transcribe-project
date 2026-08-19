@@ -137,10 +137,26 @@ class RealMediaBackend:
 
         if not path:
             if last_exc:
-                raise DownloadError(f"Download failed after retries: {str(last_exc)}")
-            raise DownloadError("Download completed but no media file was written.")
+                message = str(last_exc).lower()
+                if "bot" in message or "sign in" in message or "403" in message or "proxy authentication required" in message:
+                    logger.warning("All proxy attempts were blocked by YouTube. Falling back to direct connection (NO PROXY)...")
+                    try:
+                        fallback_opts = self._ydl_options(destination, hook)
+                        if "proxy" in fallback_opts:
+                            del fallback_opts["proxy"]
+                        with yt_dlp.YoutubeDL(fallback_opts) as ydl:
+                            info = ydl.extract_info(url, download=True)
+                            if info is None:
+                                raise DownloadError("Fallback download produced no file.")
+                            path = Path(ydl.prepare_filename(info))
+                    except Exception as fallback_exc:
+                        raise DownloadError(f"Download failed even without proxy: {str(fallback_exc)}") from fallback_exc
+                else:
+                    raise DownloadError(f"Download failed after retries: {str(last_exc)}")
+            else:
+                raise DownloadError("Download completed but no media file was written.")
 
-        if not path.exists():
+        if not path or not path.exists():
             # yt-dlp remuxes and the predicted extension can be wrong; take
             # whatever landed in our (job-private) directory.
             candidates = sorted(
