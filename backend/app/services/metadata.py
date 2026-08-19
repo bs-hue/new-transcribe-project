@@ -216,10 +216,23 @@ async def fetch_metadata(parsed: ParsedURL, settings: Settings | None = None) ->
     """Probe a video without downloading it.
 
     Runs the (blocking, network-bound) yt-dlp call in a worker thread so the
-    event loop keeps serving requests.
+    event loop keeps serving requests. Wrapped in a timeout so it cannot hang
+    indefinitely if the proxy or platform tarpits the connection.
     """
+    import asyncio
     settings = settings or get_settings()
-    info = await anyio.to_thread.run_sync(_extract_sync, parsed.canonical_url, settings)
+    
+    try:
+        info = await asyncio.wait_for(
+            anyio.to_thread.run_sync(_extract_sync, parsed.canonical_url, settings),
+            timeout=45.0
+        )
+    except asyncio.TimeoutError:
+        raise MetadataError(
+            "Connection timed out while checking the video. The platform or proxy is unresponsive. Please try again.",
+            details={"url": parsed.canonical_url}
+        )
+
 
     return VideoMetadata(
         platform=parsed.platform,
