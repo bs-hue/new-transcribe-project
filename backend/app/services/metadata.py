@@ -195,14 +195,30 @@ def _extract_sync(url: str, settings: Settings) -> dict[str, Any]:
     except ImportError as exc:  # pragma: no cover - dependency is declared
         raise MetadataError("yt-dlp is not installed on the server.") from exc
 
-    try:
-        with yt_dlp.YoutubeDL(_ydl_options(settings)) as ydl:
-            info = ydl.extract_info(url, download=False)
-    except Exception as exc:
-        _classify_and_raise(url, str(exc))
-        raise  # unreachable; keeps type checkers happy
+    info = None
+    last_exc = None
+    
+    # YouTube aggressively blocks Datacenter IPs. Since our proxy is rotating,
+    # if we hit a bot challenge, we can just retry, which automatically grabs
+    # a new IP from the Webshare load balancer until we find a clean one!
+    for attempt in range(5):
+        try:
+            with yt_dlp.YoutubeDL(_ydl_options(settings)) as ydl:
+                info = ydl.extract_info(url, download=False)
+            break  # Success!
+        except Exception as exc:
+            last_exc = exc
+            lowered = str(exc).lower()
+            if any(phrase in lowered for phrase in _LOGIN_REQUIRED) and attempt < 4:
+                logger.info(f"Proxy IP blocked by YouTube bot-check. Automatically rotating IP (attempt {attempt + 1}/5)...")
+                continue  # Retry with a new rotating proxy IP
+            
+            # If it's a permanent error or we ran out of retries, throw it.
+            _classify_and_raise(url, str(exc))
 
     if info is None:
+        if last_exc:
+            _classify_and_raise(url, str(last_exc))
         raise MetadataError("The platform returned no metadata for this URL.", details={"url": url})
 
     # A playlist slipped through despite noplaylist — take the first entry.
