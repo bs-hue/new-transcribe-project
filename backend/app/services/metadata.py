@@ -331,9 +331,9 @@ async def _fetch_youtube_apify_metadata(parsed: ParsedURL, settings: Settings) -
         try:
             response = await client.post(api_url, params=params, json=payload)
             if response.status_code != 200 and response.status_code != 201:
-                raise MetadataError(f"Apify YouTube Downloader failed (HTTP {response.status_code}). Ensure your token is valid.")
+                raise MetadataError(f"Apify YouTube Downloader failed (HTTP {response.status_code}): {response.text}")
             data = response.json()
-        except Exception as e:
+        except httpx.RequestError as e:
             raise MetadataError(f"Apify connection failed: {str(e)}")
 
     if not data or not isinstance(data, list) or len(data) == 0:
