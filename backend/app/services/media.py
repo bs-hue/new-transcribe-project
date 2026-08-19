@@ -96,13 +96,6 @@ class RealMediaBackend:
             "nopart": True,
         }
 
-        # If the user has generated an OAuth2 token using oauth_login.py, use it!
-        token_file = Path("/data/yt-dlp/youtube_oauth2_tokens.json")
-        if token_file.exists():
-            options["username"] = "oauth2"
-            options["password"] = ""
-            options["cache_dir"] = "/data/yt-dlp"
-
         from app.services.proxy import get_random_proxy
         proxy = get_random_proxy()
         if proxy:
@@ -115,71 +108,95 @@ class RealMediaBackend:
         except ImportError as exc:  # pragma: no cover
             raise DownloadError("yt-dlp is not installed on the server.") from exc
 
+        import tempfile
+        import os
+        
+        cookie_path = None
         last_exc = None
         path = None
-        for attempt in range(5):
-            try:
-                with yt_dlp.YoutubeDL(self._ydl_options(destination, hook)) as ydl:
-                    info = ydl.extract_info(url, download=True)
-                    if info is None:
-                        raise DownloadError("Download produced no file.")
-                    path = Path(ydl.prepare_filename(info))
-                break  # Success!
-            except DownloadError:
-                raise
-            except Exception as exc:
-                last_exc = exc
-                message = str(exc).lower()
-                # If we get a bot check or 403 Forbidden, the proxy IP is blocked. 
-                # Since we use a rotating proxy, retrying grabs a fresh IP.
-                if ("bot" in message or "sign in" in message or "403" in message or "proxy authentication required" in message):
-                    if attempt < 4:
-                        logger.info(f"Download proxy IP blocked or 403 Forbidden. Automatically rotating IP (attempt {attempt + 1}/5)...")
-                        continue
+        
+        try:
+            options = self._ydl_options(destination, hook)
+            if self.settings.youtube_cookies_text:
+                fd, cookie_path = tempfile.mkstemp(suffix=".txt", text=True)
+                with os.fdopen(fd, "w") as f:
+                    f.write(self.settings.youtube_cookies_text)
+                options["cookiefile"] = cookie_path
+
+            for attempt in range(5):
+                try:
+                    with yt_dlp.YoutubeDL(options) as ydl:
+                        info = ydl.extract_info(url, download=True)
+                        if info is None:
+                            raise DownloadError("Download produced no file.")
+                        path = Path(ydl.prepare_filename(info))
+                    break  # Success!
+                except DownloadError:
+                    raise
+                except Exception as exc:
+                    last_exc = exc
+                    message = str(exc).lower()
+                    # If we get a bot check or 403 Forbidden, the proxy IP is blocked. 
+                    # Since we use a rotating proxy, retrying grabs a fresh IP.
+                    if ("bot" in message or "sign in" in message or "403" in message or "proxy authentication required" in message):
+                        if attempt < 4:
+                            logger.info(f"Download proxy IP blocked or 403 Forbidden. Automatically rotating IP (attempt {attempt + 1}/5)...")
+                            options = self._ydl_options(destination, hook)
+                            if cookie_path:
+                                options["cookiefile"] = cookie_path
+                            continue
+                        else:
+                            pass # Let it fall out of the loop and trigger the fallback
+                    elif "private" in message or "unavailable" in message or "removed" in message:
+                        raise VideoUnavailableError(
+                            "This video is unavailable — it may be private, deleted, or region-locked.",
+                            details={"provider_message": str(exc)},
+                        ) from exc
                     else:
-                        pass # Let it fall out of the loop and trigger the fallback
-                elif "private" in message or "unavailable" in message or "removed" in message:
-                    raise VideoUnavailableError(
-                        "This video is unavailable — it may be private, deleted, or region-locked.",
-                        details={"provider_message": str(exc)},
-                    ) from exc
+                        raise DownloadError(f"Download failed: {str(exc)}") from exc
+
+            if not path:
+                if last_exc:
+                    message = str(last_exc).lower()
+                    if "bot" in message or "sign in" in message or "403" in message or "proxy authentication required" in message:
+                        logger.warning("All proxy attempts were blocked by YouTube. Falling back to direct connection (NO PROXY)...")
+                        try:
+                            fallback_opts = self._ydl_options(destination, hook)
+                            if "proxy" in fallback_opts:
+                                del fallback_opts["proxy"]
+                            if cookie_path:
+                                fallback_opts["cookiefile"] = cookie_path
+                            with yt_dlp.YoutubeDL(fallback_opts) as ydl:
+                                info = ydl.extract_info(url, download=True)
+                                if info is None:
+                                    raise DownloadError("Fallback download produced no file.")
+                                path = Path(ydl.prepare_filename(info))
+                        except Exception as fallback_exc:
+                            raise DownloadError(f"Download failed even without proxy: {str(fallback_exc)}") from fallback_exc
+                    else:
+                        raise DownloadError(f"Download failed after retries: {str(last_exc)}")
                 else:
-                    raise DownloadError(f"Download failed: {str(exc)}") from exc
+                    raise DownloadError("Download completed but no media file was written.")
 
-        if not path:
-            if last_exc:
-                message = str(last_exc).lower()
-                if "bot" in message or "sign in" in message or "403" in message or "proxy authentication required" in message:
-                    logger.warning("All proxy attempts were blocked by YouTube. Falling back to direct connection (NO PROXY)...")
-                    try:
-                        fallback_opts = self._ydl_options(destination, hook)
-                        if "proxy" in fallback_opts:
-                            del fallback_opts["proxy"]
-                        with yt_dlp.YoutubeDL(fallback_opts) as ydl:
-                            info = ydl.extract_info(url, download=True)
-                            if info is None:
-                                raise DownloadError("Fallback download produced no file.")
-                            path = Path(ydl.prepare_filename(info))
-                    except Exception as fallback_exc:
-                        raise DownloadError(f"Download failed even without proxy: {str(fallback_exc)}") from fallback_exc
-                else:
-                    raise DownloadError(f"Download failed after retries: {str(last_exc)}")
-            else:
-                raise DownloadError("Download completed but no media file was written.")
+            if not path or not path.exists():
+                # yt-dlp remuxes and the predicted extension can be wrong; take
+                # whatever landed in our (job-private) directory.
+                candidates = sorted(
+                    (p for p in destination.glob("source.*") if p.is_file()),
+                    key=lambda p: p.stat().st_size,
+                    reverse=True,
+                )
+                if not candidates:
+                    raise DownloadError("Download completed but no media file was written.")
+                path = candidates[0]
 
-        if not path or not path.exists():
-            # yt-dlp remuxes and the predicted extension can be wrong; take
-            # whatever landed in our (job-private) directory.
-            candidates = sorted(
-                (p for p in destination.glob("source.*") if p.is_file()),
-                key=lambda p: p.stat().st_size,
-                reverse=True,
-            )
-            if not candidates:
-                raise DownloadError("Download completed but no media file was written.")
-            path = candidates[0]
-
-        return path
+            return path
+        finally:
+            if cookie_path and os.path.exists(cookie_path):
+                try:
+                    os.remove(cookie_path)
+                except OSError:
+                    pass
 
     async def download_video(
         self, url: str, destination: Path, on_progress: ProgressCallback | None = None

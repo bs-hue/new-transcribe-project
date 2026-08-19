@@ -131,6 +131,7 @@ class Settings(BaseSettings):
     keep_media: bool = False
     youtube_proxy: Optional[str] = None
     webshare_token: Optional[str] = None
+    youtube_cookies_text: Optional[str] = None
 
     # --- Worker ---
     worker_enabled: bool = True

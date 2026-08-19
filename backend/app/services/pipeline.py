@@ -108,6 +108,10 @@ class Pipeline:
         """
         return self._provider or get_transcription_provider(settings)
 
+    def media_for(self, settings: Settings) -> MediaBackend:
+        """The media backend built from this job's live settings."""
+        return self._media or get_media_backend(settings)
+
     # --- progress ---------------------------------------------------------
 
     async def _set_stage(self, job_id: str, stage: JobStage, fraction: float = 0.0) -> None:
@@ -131,7 +135,7 @@ class Pipeline:
     async def _stage_metadata(self, ctx: PipelineContext) -> None:
         await self._set_stage(ctx.job_id, JobStage.FETCHING_METADATA)
         ctx.parsed = parse_url(ctx.source_url or ctx.canonical_url)
-        ctx.metadata = await fetch_metadata(ctx.parsed, self.settings)
+        ctx.metadata = await fetch_metadata(ctx.parsed, ctx.settings or self.settings)
 
         async with session_scope() as session:
             video = await session.get(Video, ctx.video_id)
@@ -157,14 +161,14 @@ class Pipeline:
             last_reported = fraction
             await self._set_stage(ctx.job_id, JobStage.DOWNLOADING, fraction)
 
-        ctx.video_path = await self.media.download_video(
+        ctx.video_path = await self.media_for(ctx.settings or self.settings).download_video(
             ctx.canonical_url, ctx.work.path, on_progress
         )
 
     async def _stage_audio(self, ctx: PipelineContext) -> None:
         await self._set_stage(ctx.job_id, JobStage.EXTRACTING_AUDIO)
         assert ctx.video_path is not None
-        ctx.audio_path = await self.media.extract_audio(ctx.video_path, ctx.work.path)
+        ctx.audio_path = await self.media_for(ctx.settings or self.settings).extract_audio(ctx.video_path, ctx.work.path)
 
     async def _stage_transcribe(self, ctx: PipelineContext) -> None:
         await self._set_stage(ctx.job_id, JobStage.TRANSCRIBING)
@@ -187,7 +191,7 @@ class Pipeline:
         # Floor of 10s, not 60: a hosted provider's per-request limit can be
         # shorter than a minute, and a chunk larger than the cap is refused.
         chunk_seconds = max(10, int(cap * 0.9 / _BYTES_PER_AUDIO_SECOND))
-        chunks = await self.media.split_audio(ctx.audio_path, chunk_seconds)
+        chunks = await self.media_for(settings).split_audio(ctx.audio_path, chunk_seconds)
         logger.info("Audio is %d bytes; transcribing in %d chunks", size, len(chunks))
 
         results: list[tuple[TranscriptionResult, float]] = []

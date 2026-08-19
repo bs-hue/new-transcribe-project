@@ -142,6 +142,13 @@ DEFINITIONS: tuple[Definition, ...] = (
         },
         applies_to="jobs started from now on",
     ),
+    Definition(
+        key="youtube_cookies_text",
+        kind="str",
+        label="YouTube Cookies (Optional)",
+        help="Paste the contents of your cookies.txt file here to authenticate with YouTube and bypass the 'Sign in' blocks on Datacenter IPs.",
+        applies_to="jobs started from now on",
+    ),
 )
 
 _BY_KEY = {definition.key: definition for definition in DEFINITIONS}
