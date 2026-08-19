@@ -234,7 +234,7 @@ class RealMediaBackend:
         # Payload according to the actor's schema
         payload = {
             "startUrls": [url],
-            "quality": "720"
+            "quality": "360"
         }
 
         logger.info(f"Calling Apify to run epctex/youtube-video-downloader for: {url}")
