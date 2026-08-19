@@ -50,7 +50,7 @@ async def read_settings(
         values=await current_values(session),
         definitions=_definitions(),
         transcription_provider=effective.transcription_provider,
-        cookies_configured=bool(effective.cookies_file),
+        cookies_configured=bool(effective.youtube_cookies_text),
         worker_concurrency=effective.worker_concurrency,
         environment=effective.environment,
     )
