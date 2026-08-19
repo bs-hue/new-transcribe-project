@@ -124,16 +124,19 @@ class RealMediaBackend:
                 message = str(exc).lower()
                 # If we get a bot check or 403 Forbidden, the proxy IP is blocked. 
                 # Since we use a rotating proxy, retrying grabs a fresh IP.
-                if ("bot" in message or "sign in" in message or "403" in message or "proxy authentication required" in message) and attempt < 4:
-                    logger.info(f"Download proxy IP blocked or 403 Forbidden. Automatically rotating IP (attempt {attempt + 1}/5)...")
-                    continue
-                
-                if "private" in message or "unavailable" in message or "removed" in message:
+                if ("bot" in message or "sign in" in message or "403" in message or "proxy authentication required" in message):
+                    if attempt < 4:
+                        logger.info(f"Download proxy IP blocked or 403 Forbidden. Automatically rotating IP (attempt {attempt + 1}/5)...")
+                        continue
+                    else:
+                        pass # Let it fall out of the loop and trigger the fallback
+                elif "private" in message or "unavailable" in message or "removed" in message:
                     raise VideoUnavailableError(
                         "This video is unavailable — it may be private, deleted, or region-locked.",
                         details={"provider_message": str(exc)},
                     ) from exc
-                raise DownloadError(f"Download failed: {str(exc)}") from exc
+                else:
+                    raise DownloadError(f"Download failed: {str(exc)}") from exc
 
         if not path:
             if last_exc:
