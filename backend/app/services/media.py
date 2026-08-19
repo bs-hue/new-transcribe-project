@@ -204,6 +204,11 @@ class RealMediaBackend:
         destination.mkdir(parents=True, exist_ok=True)
         loop = asyncio.get_running_loop()
 
+        # Route YouTube URLs to Apify if a token is configured.
+        if ("youtube.com" in url or "youtu.be" in url) and self.settings.apify_api_token:
+            logger.info("YouTube URL detected and Apify Token present. Using Apify Downloader.")
+            return await self._download_youtube_apify(url, destination)
+
         def hook(status: dict) -> None:
             if on_progress is None or status.get("status") != "downloading":
                 return
@@ -218,6 +223,57 @@ class RealMediaBackend:
         path = await anyio.to_thread.run_sync(self._download_sync, url, destination, hook)
         logger.info("Downloaded %s -> %s (%d bytes)", url, path.name, path.stat().st_size)
         return path
+
+    async def _download_youtube_apify(self, url: str, destination: Path) -> Path:
+        import httpx
+        
+        # Use the synchronous wait endpoint for the epctex YouTube Downloader actor
+        api_url = f"https://api.apify.com/v2/acts/epctex~youtube-video-downloader/run-sync-get-dataset-items"
+        params = {"token": self.settings.apify_api_token}
+        
+        # Payload according to the actor's schema
+        payload = {
+            "startUrls": [url],
+            "quality": "720p"
+        }
+
+        logger.info(f"Calling Apify to run epctex/youtube-video-downloader for: {url}")
+        # Note: run-sync endpoint waits for the actor to finish. Actor runs can take a minute or two.
+        async with httpx.AsyncClient(timeout=300) as client:
+            response = await client.post(api_url, params=params, json=payload)
+            
+            if response.status_code != 200 and response.status_code != 201:
+                logger.error(f"Apify failed: {response.status_code} {response.text}")
+                raise DownloadError(f"Apify YouTube Downloader failed (HTTP {response.status_code}). Ensure your token is valid.")
+            
+            data = response.json()
+            
+        if not data or not isinstance(data, list) or len(data) == 0:
+            logger.error(f"Apify returned empty or invalid dataset: {data}")
+            raise DownloadError("Apify returned success, but no dataset items were found.")
+            
+        # Extract the storage URL from the first item
+        item = data[0]
+        storage_url = item.get("storageUrl")
+        
+        if not storage_url:
+            logger.error(f"Apify returned dataset without storageUrl: {item}")
+            raise DownloadError("Apify ran successfully, but could not extract a download URL for this video.")
+
+        logger.info(f"Apify finished. Downloading MP4 directly from storage: {storage_url[:80]}...")
+
+        file_path = destination / "source.mp4"
+        
+        async with httpx.AsyncClient(timeout=300) as client:
+            async with client.stream("GET", storage_url) as stream_resp:
+                if stream_resp.status_code != 200:
+                    raise DownloadError(f"Failed to download media from Apify storage (HTTP {stream_resp.status_code})")
+                async with await anyio.open_file(file_path, "wb") as f:
+                    async for chunk in stream_resp.aiter_bytes():
+                        await f.write(chunk)
+
+        logger.info(f"Downloaded {url} -> {file_path.name} ({file_path.stat().st_size} bytes)")
+        return file_path
 
     # --- audio ------------------------------------------------------------
 

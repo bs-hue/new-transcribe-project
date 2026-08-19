@@ -149,6 +149,13 @@ DEFINITIONS: tuple[Definition, ...] = (
         help="Paste the contents of your cookies.txt file here to authenticate with YouTube and bypass the 'Sign in' blocks on Datacenter IPs.",
         applies_to="jobs started from now on",
     ),
+    Definition(
+        key="apify_api_token",
+        kind="str",
+        label="Apify API Token (For YouTube)",
+        help="Paste your Apify Personal API Token here to route YouTube downloads through the epctex/youtube-video-downloader Apify actor, bypassing bot blocks.",
+        applies_to="jobs started from now on",
+    ),
 )
 
 _BY_KEY = {definition.key: definition for definition in DEFINITIONS}

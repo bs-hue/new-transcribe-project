@@ -279,6 +279,10 @@ async def fetch_metadata(parsed: ParsedURL, settings: Settings | None = None) ->
     import asyncio
     settings = settings or get_settings()
     
+    # Fast path for Apify YouTube
+    if parsed.platform == "youtube" and settings.apify_api_token:
+        return await _fetch_youtube_apify_metadata(parsed, settings)
+    
     try:
         info = await asyncio.wait_for(
             anyio.to_thread.run_sync(_extract_sync, parsed.canonical_url, settings),
@@ -305,7 +309,53 @@ async def fetch_metadata(parsed: ParsedURL, settings: Settings | None = None) ->
         estimated_size_bytes=_estimate_size(info),
         view_count=info.get("view_count"),
         like_count=info.get("like_count"),
-        published_at=_parse_upload_date(info),
         is_live=bool(info.get("is_live")),
         raw=_slim_raw(info),
+    )
+
+async def _fetch_youtube_apify_metadata(parsed: ParsedURL, settings: Settings) -> VideoMetadata:
+    import httpx
+    
+    # We call the exact same endpoint. Since Apify caches identical runs, 
+    # it usually doesn't double-bill or double-download if the URL and quality are the same within a short time.
+    api_url = f"https://api.apify.com/v2/acts/epctex~youtube-video-downloader/run-sync-get-dataset-items"
+    params = {"token": settings.apify_api_token}
+    
+    payload = {
+        "startUrls": [parsed.canonical_url],
+        "quality": "720p" # Default setting, just to get metadata
+    }
+
+    logger.info("Calling Apify to resolve YouTube metadata...")
+    async with httpx.AsyncClient(timeout=300) as client:
+        try:
+            response = await client.post(api_url, params=params, json=payload)
+            if response.status_code != 200 and response.status_code != 201:
+                raise MetadataError(f"Apify YouTube Downloader failed (HTTP {response.status_code}). Ensure your token is valid.")
+            data = response.json()
+        except Exception as e:
+            raise MetadataError(f"Apify connection failed: {str(e)}")
+
+    if not data or not isinstance(data, list) or len(data) == 0:
+        raise MetadataError("Apify returned success, but no dataset items were found.")
+
+    item = data[0]
+    
+    return VideoMetadata(
+        platform=parsed.platform,
+        platform_video_id=item.get("id") or parsed.video_id or "unknown",
+        canonical_url=item.get("url") or parsed.canonical_url,
+        source_url=parsed.original_url,
+        title=item.get("title") or "YouTube Video (Apify)",
+        description=item.get("description"),
+        author=item.get("channelName") or "YouTube User",
+        author_url=None,
+        thumbnail_url=item.get("thumbnailUrl") or item.get("thumbnail"),
+        duration_seconds=float(item["duration"]) if item.get("duration") else None,
+        estimated_size_bytes=int(item["fileSize"]) if item.get("fileSize") else None,
+        view_count=int(item["viewCount"]) if item.get("viewCount") else None,
+        like_count=None,
+        published_at=None,
+        is_live=False,
+        raw={"apify": True, "actor": "epctex/youtube-video-downloader"},
     )
