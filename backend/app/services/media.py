@@ -94,7 +94,6 @@ class RealMediaBackend:
             "fragment_retries": 3,
             "progress_hooks": [hook],
             "nopart": True,
-            "extractor_args": {"youtube": ["client=android,ios"]},
         }
         from app.services.proxy import get_random_proxy
         proxy = get_random_proxy()
@@ -108,23 +107,38 @@ class RealMediaBackend:
         except ImportError as exc:  # pragma: no cover
             raise DownloadError("yt-dlp is not installed on the server.") from exc
 
-        try:
-            with yt_dlp.YoutubeDL(self._ydl_options(destination, hook)) as ydl:
-                info = ydl.extract_info(url, download=True)
-                if info is None:
-                    raise DownloadError("Download produced no file.")
-                path = Path(ydl.prepare_filename(info))
-        except DownloadError:
-            raise
-        except Exception as exc:
-            message = str(exc)
-            lowered = message.lower()
-            if "private" in lowered or "unavailable" in lowered or "removed" in lowered:
-                raise VideoUnavailableError(
-                    "This video is unavailable — it may be private, deleted, or region-locked.",
-                    details={"provider_message": message},
-                ) from exc
-            raise DownloadError(f"Download failed: {message}") from exc
+        last_exc = None
+        path = None
+        for attempt in range(5):
+            try:
+                with yt_dlp.YoutubeDL(self._ydl_options(destination, hook)) as ydl:
+                    info = ydl.extract_info(url, download=True)
+                    if info is None:
+                        raise DownloadError("Download produced no file.")
+                    path = Path(ydl.prepare_filename(info))
+                break  # Success!
+            except DownloadError:
+                raise
+            except Exception as exc:
+                last_exc = exc
+                message = str(exc).lower()
+                # If we get a bot check or 403 Forbidden, the proxy IP is blocked. 
+                # Since we use a rotating proxy, retrying grabs a fresh IP.
+                if ("bot" in message or "sign in" in message or "403" in message or "proxy authentication required" in message) and attempt < 4:
+                    logger.info(f"Download proxy IP blocked or 403 Forbidden. Automatically rotating IP (attempt {attempt + 1}/5)...")
+                    continue
+                
+                if "private" in message or "unavailable" in message or "removed" in message:
+                    raise VideoUnavailableError(
+                        "This video is unavailable — it may be private, deleted, or region-locked.",
+                        details={"provider_message": str(exc)},
+                    ) from exc
+                raise DownloadError(f"Download failed: {str(exc)}") from exc
+
+        if not path:
+            if last_exc:
+                raise DownloadError(f"Download failed after retries: {str(last_exc)}")
+            raise DownloadError("Download completed but no media file was written.")
 
         if not path.exists():
             # yt-dlp remuxes and the predicted extension can be wrong; take
