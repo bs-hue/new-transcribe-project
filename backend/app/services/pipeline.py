@@ -169,6 +169,21 @@ class Pipeline:
         await self._set_stage(ctx.job_id, JobStage.EXTRACTING_AUDIO)
         assert ctx.video_path is not None
         ctx.audio_path = await self.media_for(ctx.settings or self.settings).extract_audio(ctx.video_path, ctx.work.path)
+        
+        # Calculate exact duration directly from the extracted audio stream
+        try:
+            import wave
+            with wave.open(str(ctx.audio_path), "rb") as wf:
+                frames = wf.getnframes()
+                rate = wf.getframerate()
+                if rate > 0 and frames > 0:
+                    exact_duration = frames / float(rate)
+                    async with session_scope() as session:
+                        video = await session.get(Video, ctx.video_id)
+                        if video is not None and (video.duration_seconds is None or video.duration_seconds == 0):
+                            video.duration_seconds = round(exact_duration, 2)
+        except Exception as e:
+            logger.debug("Could not read exact WAV duration: %s", e)
 
     async def _stage_transcribe(self, ctx: PipelineContext) -> None:
         await self._set_stage(ctx.job_id, JobStage.TRANSCRIBING)
