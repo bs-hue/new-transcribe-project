@@ -31,12 +31,6 @@ services:
              uvicorn app.main:app --host 0.0.0.0 --port 8000 --proxy-headers --forwarded-allow-ips='*'"
     volumes:
       - api-data:/data
-    healthcheck:
-      test: ["CMD-SHELL", "python -c \"import urllib.request; urllib.request.urlopen('http://localhost:8000/api/health')\""]
-      interval: 30s
-      timeout: 5s
-      retries: 3
-      start_period: 15s
     restart: unless-stopped
 
   web:
@@ -45,14 +39,7 @@ services:
       args:
         VITE_API_BASE_URL: ""
     depends_on:
-      api:
-        condition: service_healthy
-    healthcheck:
-      test: ["CMD", "wget", "-qO-", "http://localhost:80/"]
-      interval: 30s
-      timeout: 5s
-      retries: 3
-      start_period: 5s
+      - api
     restart: unless-stopped
 
   caddy:
@@ -70,16 +57,8 @@ services:
       - caddy-data:/data
       - caddy-config:/config
     depends_on:
-      web:
-        condition: service_healthy
-      api:
-        condition: service_healthy
-    healthcheck:
-      test: ["CMD", "wget", "-qO-", "http://localhost:80/"]
-      interval: 30s
-      timeout: 5s
-      retries: 3
-      start_period: 5s
+      - api
+      - web
     restart: unless-stopped
 
 volumes:
