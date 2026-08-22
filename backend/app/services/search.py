@@ -277,9 +277,6 @@ class LikeSearchBackend(SearchBackend):
         offset: int = 0,
     ) -> SearchResults:
         tokens = _tokenise(query)
-        if not tokens:
-            return SearchResults(hits=[], total=0)
-
         filters = filters or SearchFilters()
         params: dict = {"limit": limit, "offset": offset}
         token_clauses = []
@@ -291,7 +288,20 @@ class LikeSearchBackend(SearchBackend):
                 f"OR LOWER(v.author) LIKE :{key})"
             )
 
-        where = " AND ".join(token_clauses) + _filter_clause(filters, params)
+        where_tokens = (" AND ".join(token_clauses)) if token_clauses else ""
+        filter_str = _filter_clause(filters, params)
+
+        if not where_tokens and not filter_str:
+            return SearchResults(hits=[], total=0)
+
+        if where_tokens and filter_str:
+            where = f"{where_tokens}{filter_str}"
+        elif where_tokens:
+            where = where_tokens
+        else:
+            # Only filter_str, which starts with " AND "
+            where = filter_str.lstrip(" AND ")
+
         base = f"FROM transcripts t JOIN videos v ON v.id = t.video_id WHERE {where}"
 
         total = (await session.execute(text(f"SELECT COUNT(*) {base}"), params)).scalar_one()

@@ -69,7 +69,7 @@ export function TranscriptPage() {
   const transcript = video.transcript;
 
   return (
-    <div className="space-y-6">
+    <div className="space-y-6 max-w-5xl mx-auto">
       <Button asChild variant="ghost" size="sm" className="-ml-3">
         <Link to="/history">
           <ArrowLeft />

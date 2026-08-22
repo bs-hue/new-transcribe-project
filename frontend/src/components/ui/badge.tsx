@@ -13,9 +13,10 @@ const badgeVariants = cva(
         success: "border-transparent bg-success/10 text-success",
         warning: "border-transparent bg-warning/15 text-warning",
         outline: "text-foreground",
-        youtube: "border-transparent bg-red-500/10 text-red-600 dark:text-red-400",
+        youtube:
+          "border-transparent bg-red-600 text-white font-medium shadow-sm drop-shadow-sm",
         instagram:
-          "border-transparent bg-fuchsia-500/10 text-fuchsia-600 dark:text-fuchsia-400",
+          "border-transparent bg-gradient-to-r from-purple-600 via-pink-600 to-amber-500 text-white font-medium shadow-sm drop-shadow-sm",
       },
     },
     defaultVariants: { variant: "default" },

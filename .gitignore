@@ -30,6 +30,16 @@ venv/
 .coverage
 htmlcov/
 
+# Local scratch and test scripts (root only)
+/scratch/
+/test_*.py
+/test*.py
+/get_proxies*.py
+/schema.json
+!backend/tests/
+!backend/tests/**
+backend/tests/__pycache__/
+
 # Node / Vite
 node_modules/
 dist/

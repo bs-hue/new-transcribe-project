@@ -29,10 +29,10 @@ export function SettingsPage() {
   const isAdmin = user?.role === "admin";
 
   return (
-    <div className="space-y-8">
-      <header>
-        <h1 className="text-2xl font-semibold tracking-tight">Settings</h1>
-        <p className="mt-1 text-sm text-muted-foreground">
+    <div className="space-y-8 max-w-4xl mx-auto">
+      <header className="space-y-1">
+        <h1 className="font-heading text-2xl sm:text-3xl font-bold tracking-tight">Settings</h1>
+        <p className="text-sm text-muted-foreground">
           Your account{isAdmin ? ", how the system behaves, and who can sign in" : ""}.
         </p>
       </header>

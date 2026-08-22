@@ -19,7 +19,7 @@ router = APIRouter(prefix="/search", tags=["search"])
 async def search(
     session: DbSession,
     settings: AppSettings,
-    q: str = Query(min_length=1, description="Words to look for across all transcripts"),
+    q: str = Query(default="", min_length=0, description="Words to look for across all transcripts"),
     platform: str | None = None,
     author: str | None = None,
     created_after: datetime | None = None,

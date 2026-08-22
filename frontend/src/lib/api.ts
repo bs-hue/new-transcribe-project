@@ -147,15 +147,44 @@ async function download(path: string, init?: RequestInit): Promise<void> {
   URL.revokeObjectURL(url);
 }
 
+// --- in-memory cache ---------------------------------------------------------
+
+const apiCache = new Map<string, unknown>();
+
+export function clearApiCache(pathPrefix?: string) {
+  if (!pathPrefix) {
+    apiCache.clear();
+    return;
+  }
+  for (const key of apiCache.keys()) {
+    if (key.startsWith(pathPrefix)) {
+      apiCache.delete(key);
+    }
+  }
+}
+
+async function cachedRequest<T>(path: string, force = false, init?: RequestInit): Promise<T> {
+  if (!force && apiCache.has(path)) {
+    return apiCache.get(path) as T;
+  }
+  const result = await request<T>(path, init);
+  apiCache.set(path, result);
+  return result;
+}
+
 // --- endpoints ---------------------------------------------------------------
 
 export const api = {
+  clearCache: clearApiCache,
+
   // auth
-  login: (email: string, password: string) =>
-    request<TokenResponse>("/api/auth/login", {
+  login: (email: string, password: string) => {
+    clearApiCache();
+    return request<TokenResponse>("/api/auth/login", {
       method: "POST",
       body: JSON.stringify({ email, password }),
-    }),
+    });
+  },
 
   me: () => request<User>("/api/auth/me"),
 
@@ -165,41 +194,50 @@ export const api = {
       body: JSON.stringify({ current_password: currentPassword, new_password: newPassword }),
     }),
 
-  users: () => request<User[]>("/api/auth/users"),
+  users: (force = false) => cachedRequest<User[]>("/api/auth/users", force),
 
   createUser: (body: {
     email: string;
     password: string;
     full_name?: string;
     role: "admin" | "member";
-  }) => request<User>("/api/auth/users", { method: "POST", body: JSON.stringify(body) }),
+  }) => {
+    clearApiCache("/api/auth/users");
+    return request<User>("/api/auth/users", { method: "POST", body: JSON.stringify(body) });
+  },
 
   updateUser: (
     userId: string,
     body: { full_name?: string; role?: "admin" | "member"; is_active?: boolean },
-  ) =>
-    request<User>(`/api/auth/users/${userId}`, {
+  ) => {
+    clearApiCache("/api/auth/users");
+    return request<User>(`/api/auth/users/${userId}`, {
       method: "PATCH",
       body: JSON.stringify(body),
-    }),
+    });
+  },
 
-  deleteUser: (userId: string) =>
-    request<void>(`/api/auth/users/${userId}`, { method: "DELETE" }),
+  deleteUser: (userId: string) => {
+    clearApiCache("/api/auth/users");
+    return request<void>(`/api/auth/users/${userId}`, { method: "DELETE" });
+  },
 
   // discovery
-  meta: () => request<Meta>("/api/meta"),
+  meta: (force = false) => cachedRequest<Meta>("/api/meta", force),
 
   // dashboard
-  dashboard: () => request<Dashboard>("/api/dashboard"),
+  dashboard: (force = false) => cachedRequest<Dashboard>("/api/dashboard", force),
 
   // settings
-  settings: () => request<SettingsPayload>("/api/settings"),
+  settings: (force = false) => cachedRequest<SettingsPayload>("/api/settings", force),
 
-  updateSettings: (values: Record<string, string | number | null>) =>
-    request<SettingsPayload>("/api/settings", {
+  updateSettings: (values: Record<string, string | number | null>) => {
+    clearApiCache("/api/settings");
+    return request<SettingsPayload>("/api/settings", {
       method: "PATCH",
       body: JSON.stringify({ values }),
-    }),
+    });
+  },
 
   systemCheck: (deep = false) =>
     request<SystemCheck>(`/api/settings/system-check${deep ? "?deep=true" : ""}`),
@@ -211,36 +249,55 @@ export const api = {
       body: JSON.stringify({ urls }),
     }),
 
-  submit: (urls: string[], language?: string) =>
-    request<Submission>("/api/videos", {
+  submit: (urls: string[], language?: string) => {
+    clearApiCache("/api/dashboard");
+    clearApiCache("/api/jobs");
+    clearApiCache("/api/videos");
+    return request<Submission>("/api/videos", {
       method: "POST",
       body: JSON.stringify({ urls, language: language || null }),
-    }),
+    });
+  },
 
   // jobs
   batchStatus: (batchId: string) => request<BatchStatus>(`/api/jobs/batch/${batchId}`),
-  job: (jobId: string) => request<Job>(`/api/jobs/${jobId}`),
-  jobs: (params: { status?: string; batch_id?: string; limit?: number; offset?: number }) =>
-    request<Paged<Job>>(`/api/jobs${query(params)}`),
-  retryJob: (jobId: string) => request<Job>(`/api/jobs/${jobId}/retry`, { method: "POST" }),
-  cancelJob: (jobId: string) => request<Job>(`/api/jobs/${jobId}/cancel`, { method: "POST" }),
+  job: (jobId: string, force = false) => cachedRequest<Job>(`/api/jobs/${jobId}`, force),
+  jobs: (params: { status?: string; batch_id?: string; limit?: number; offset?: number }, force = false) =>
+    cachedRequest<Paged<Job>>(`/api/jobs${query(params)}`, force),
+  retryJob: (jobId: string) => {
+    clearApiCache("/api/dashboard");
+    clearApiCache("/api/jobs");
+    return request<Job>(`/api/jobs/${jobId}/retry`, { method: "POST" });
+  },
+  cancelJob: (jobId: string) => {
+    clearApiCache("/api/dashboard");
+    clearApiCache("/api/jobs");
+    return request<Job>(`/api/jobs/${jobId}/cancel`, { method: "POST" });
+  },
 
   // library
-  videos: (params: {
-    platform?: string;
-    author?: string;
-    has_transcript?: boolean;
-    limit?: number;
-    offset?: number;
-  }) => request<Paged<VideoSummary>>(`/api/videos${query(params)}`),
+  videos: (
+    params: {
+      platform?: string;
+      author?: string;
+      has_transcript?: boolean;
+      limit?: number;
+      offset?: number;
+    },
+    force = false,
+  ) => cachedRequest<Paged<VideoSummary>>(`/api/videos${query(params)}`, force),
 
-  video: (videoId: string) => request<VideoDetail>(`/api/videos/${videoId}`),
+  video: (videoId: string, force = false) =>
+    cachedRequest<VideoDetail>(`/api/videos/${videoId}`, force),
 
-  deleteVideo: (videoId: string) =>
-    request<void>(`/api/videos/${videoId}`, { method: "DELETE" }),
+  deleteVideo: (videoId: string) => {
+    clearApiCache("/api/dashboard");
+    clearApiCache("/api/videos");
+    return request<void>(`/api/videos/${videoId}`, { method: "DELETE" });
+  },
 
-  transcript: (transcriptId: string) =>
-    request<TranscriptDetail>(`/api/transcripts/${transcriptId}`),
+  transcript: (transcriptId: string, force = false) =>
+    cachedRequest<TranscriptDetail>(`/api/transcripts/${transcriptId}`, force),
 
   // search
   search: (params: {

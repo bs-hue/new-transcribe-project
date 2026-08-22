@@ -100,10 +100,10 @@ export function NewJobPage() {
   const currentStep = STEPS.findIndex((s) => s.key === step);
 
   return (
-    <div className="space-y-8">
-      <header>
-        <h1 className="text-2xl font-semibold tracking-tight">Add videos to research</h1>
-        <p className="mt-1 text-sm text-muted-foreground">
+    <div className="space-y-8 max-w-4xl mx-auto">
+      <header className="space-y-1">
+        <h1 className="font-heading text-2xl sm:text-3xl font-bold tracking-tight">Add videos to research</h1>
+        <p className="text-sm text-muted-foreground">
           Paste the links. The system reads each video&apos;s details, downloads it,
           transcribes it, and files it in the library — searchable and exportable.
         </p>

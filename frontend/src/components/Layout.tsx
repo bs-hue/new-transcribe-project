@@ -1,4 +1,8 @@
 import {
+  ArrowUpRight,
+  Compass,
+  FileText,
+  History,
   LayoutDashboard,
   ListChecks,
   LogOut,
@@ -6,6 +10,7 @@ import {
   Plus,
   Search,
   Settings,
+  Sparkles,
   Video,
 } from "lucide-react";
 import { NavLink, Outlet } from "react-router-dom";
@@ -13,94 +18,156 @@ import { Button } from "@/components/ui/button";
 import { useAuth } from "@/lib/auth";
 import { cn } from "@/lib/utils";
 
-const LINKS = [
+const DESKTOP_LINKS = [
   { to: "/", label: "Dashboard", icon: LayoutDashboard, end: true },
-  { to: "/jobs/new", label: "New job", icon: Plus, end: true },
   { to: "/jobs", label: "Jobs", icon: ListChecks, end: false },
-  { to: "/history", label: "History", icon: Video, end: false },
+  { to: "/history", label: "Library", icon: Video, end: false },
+  { to: "/search", label: "Search", icon: Search, end: false },
+];
+
+const MOBILE_LINKS = [
+  { to: "/", label: "Dashboard", icon: LayoutDashboard, end: true },
+  { to: "/jobs/new", label: "New", icon: Plus, end: true },
+  { to: "/jobs", label: "Jobs", icon: ListChecks, end: false },
+  { to: "/history", label: "Library", icon: Video, end: false },
   { to: "/search", label: "Search", icon: Search, end: false },
 ];
 
 export function Layout() {
   const { user, signOut } = useAuth();
+  const userInitial = (user?.full_name || user?.email || "U").charAt(0).toUpperCase();
+  const userName = (user?.full_name || user?.email || "").split("@")[0];
 
   return (
-    <div className="min-h-screen bg-background">
-      <header className="border-b bg-card">
-        <div className="container flex h-16 items-center justify-between gap-6">
-          <div className="flex min-w-0 items-center gap-6">
-            <NavLink to="/" className="flex shrink-0 items-center gap-2.5">
-              <span className="flex h-9 w-9 items-center justify-center rounded-lg bg-primary text-primary-foreground">
+    <div className="min-h-screen bg-background text-foreground flex flex-col antialiased">
+      {/* Sticky Top Header */}
+      <header className="sticky top-0 z-40 border-b border-border/80 bg-background/95 backdrop-blur supports-[backdrop-filter]:bg-background/70">
+        <div className="container flex h-16 items-center justify-between gap-3">
+          {/* Logo & Brand */}
+          <div className="flex items-center gap-4 lg:gap-7">
+            <NavLink to="/" className="flex shrink-0 items-center gap-2.5 sm:gap-3 group focus:outline-none">
+              <span className="flex h-9 w-9 items-center justify-center rounded-xl bg-primary text-primary-foreground shadow-sm transition-transform duration-200 group-hover:scale-105">
                 <Mic className="h-4.5 w-4.5" />
               </span>
-              {/* The full name is long, so it is shortened rather than
-                  truncated mid-word on narrower screens. */}
-              <span className="hidden font-semibold leading-tight xl:inline">
-                Instagram &amp; YouTube Transcription Agent
-              </span>
-              <span className="hidden font-semibold lg:inline xl:hidden">
-                Transcription Agent
-              </span>
+              <div className="flex flex-col">
+                <span className="font-heading font-semibold text-sm leading-tight tracking-tight sm:text-base">
+                  Transcription Hub
+                </span>
+                <span className="hidden text-[11px] text-muted-foreground font-normal sm:block">
+                  YouTube & Instagram AI
+                </span>
+              </div>
             </NavLink>
 
-            <nav className="flex items-center gap-1 overflow-x-auto">
-              {LINKS.map(({ to, label, icon: Icon, end }) => (
+            {/* Desktop Navigation */}
+            <nav className="hidden md:flex items-center gap-1 bg-muted/50 p-1 rounded-xl border border-border/50">
+              {DESKTOP_LINKS.map(({ to, label, icon: Icon, end }) => (
                 <NavLink
                   key={to}
                   to={to}
                   end={end}
                   className={({ isActive }) =>
                     cn(
-                      "inline-flex shrink-0 items-center gap-2 rounded-md px-3 py-1.5 text-sm font-medium transition-colors",
+                      "inline-flex items-center gap-2 rounded-lg px-3 py-1.5 text-xs font-medium transition-all duration-150",
                       isActive
-                        ? "bg-primary text-primary-foreground"
-                        : "text-muted-foreground hover:bg-accent hover:text-accent-foreground",
+                        ? "bg-background text-foreground shadow-sm font-semibold"
+                        : "text-muted-foreground hover:text-foreground hover:bg-background/50",
                     )
                   }
                 >
-                  <Icon className="h-4 w-4" />
-                  <span className="hidden md:inline">{label}</span>
+                  <Icon className="h-3.5 w-3.5" />
+                  <span>{label}</span>
                 </NavLink>
               ))}
             </nav>
           </div>
 
-          {/* Signing out used to be two clicks inside a dropdown, which is one
-              click too many for the thing people look for when they want to
-              leave. Settings has its own nav entry, so the menu earned nothing. */}
-          <div className="flex shrink-0 items-center gap-2">
-            <div className="hidden text-right sm:block">
-              <p className="max-w-[12rem] truncate text-sm font-medium leading-tight">
-                {user?.full_name || user?.email}
-              </p>
-              {user?.full_name ? (
-                <p className="max-w-[12rem] truncate text-xs text-muted-foreground">
-                  {user.email}
-                </p>
-              ) : null}
-            </div>
-
-            <Button asChild variant="ghost" size="icon" title="Settings">
-              <NavLink to="/settings" aria-label="Settings">
-                <Settings className="h-4 w-4" />
+          {/* Right Area: Action CTA & Unified User Profile */}
+          <div className="flex items-center gap-2 sm:gap-3">
+            {/* Quick new job CTA only on laptop/desktop (>=1024px) where there is plenty of space */}
+            <Button asChild size="sm" className="hidden lg:inline-flex h-8 gap-1.5 text-xs shadow-sm font-medium">
+              <NavLink to="/jobs/new">
+                <Plus className="h-3.5 w-3.5" />
+                <span>Transcribe</span>
               </NavLink>
             </Button>
 
-            <Button variant="outline" size="sm" onClick={signOut}>
-              <LogOut className="h-4 w-4" />
-              <span className="hidden sm:inline">Sign out</span>
-            </Button>
+            {/* Unified User & Session Pill */}
+            <div className="flex items-center gap-1 bg-muted/50 rounded-xl p-1 border border-border/60">
+              <div className="flex items-center gap-2 px-1.5 py-0.5" title={user?.email}>
+                <div className="h-6 w-6 rounded-lg bg-primary/10 text-primary border border-primary/20 flex items-center justify-center text-xs font-bold font-heading">
+                  {userInitial}
+                </div>
+                <span className="hidden xl:inline-block max-w-[7rem] truncate text-xs font-medium text-foreground">
+                  {userName}
+                </span>
+              </div>
+
+              {/* Settings Link */}
+              <Button asChild variant="ghost" size="icon" className="h-7 w-7 rounded-lg text-muted-foreground hover:text-foreground hover:bg-background/80" title="Settings">
+                <NavLink to="/settings" aria-label="Settings">
+                  <Settings className="h-3.5 w-3.5" />
+                </NavLink>
+              </Button>
+
+              {/* Sign Out Button */}
+              <Button
+                variant="ghost"
+                size="icon"
+                onClick={signOut}
+                className="h-7 w-7 rounded-lg text-muted-foreground hover:text-destructive hover:bg-destructive/15 transition-colors"
+                title="Sign out"
+                aria-label="Sign out"
+              >
+                <LogOut className="h-3.5 w-3.5" />
+              </Button>
+            </div>
+          </div>
+        </div>
+
+        {/* Mobile Sub-Navigation Bar */}
+        <div className="flex md:hidden border-t border-border/60 bg-muted/25 px-2 py-1.5 overflow-x-auto">
+          <div className="container flex items-center justify-around gap-1">
+            {MOBILE_LINKS.map(({ to, label, icon: Icon, end }) => (
+              <NavLink
+                key={to}
+                to={to}
+                end={end}
+                className={({ isActive }) =>
+                  cn(
+                    "flex flex-col items-center gap-0.5 rounded-lg px-2 py-1 text-[10px] font-medium transition-colors",
+                    isActive
+                      ? "text-primary font-semibold"
+                      : "text-muted-foreground hover:text-foreground",
+                  )
+                }
+              >
+                <Icon className="h-3.5 w-3.5" />
+                <span>{label}</span>
+              </NavLink>
+            ))}
           </div>
         </div>
       </header>
 
-      <main className="container py-8">
+      {/* Main Content Area */}
+      <main className="container flex-1 py-6 sm:py-8">
         <Outlet />
       </main>
 
-      <footer className="container pb-10 text-xs text-muted-foreground">
-        Instagram &amp; YouTube Transcription Agent
+      {/* Clean Modern Footer */}
+      <footer className="border-t border-border/60 py-6 text-xs text-muted-foreground bg-muted/20">
+        <div className="container flex flex-col sm:flex-row items-center justify-between gap-3 text-center sm:text-left">
+          <div className="flex items-center gap-2 font-medium justify-center sm:justify-start">
+            <span className="h-2 w-2 rounded-full bg-success inline-block"></span>
+            <span>Transcription Hub · Open Source Local AI</span>
+          </div>
+          <p className="text-[11px]">
+            Fast segment-level transcription for YouTube & Instagram videos
+          </p>
+        </div>
       </footer>
     </div>
   );
 }
+
