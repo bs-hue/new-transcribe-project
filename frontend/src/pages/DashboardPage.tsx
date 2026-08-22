@@ -1,25 +1,16 @@
 import {
   AlertTriangle,
   ArrowRight,
-  ArrowUpRight,
   Calendar,
   CheckCircle2,
   Clock,
-  FileAudio,
-  FileText,
-  FolderPlus,
-  History,
-  Layers,
   Library,
   Loader2,
   PlayCircle,
   Plus,
   RefreshCw,
   Search,
-  Sparkles,
   User,
-  Video,
-  Zap,
 } from "lucide-react";
 import { useCallback, useEffect, useState } from "react";
 import { Link } from "react-router-dom";
@@ -31,11 +22,11 @@ import {
   Thumbnail,
 } from "@/components/shared";
 import { Button } from "@/components/ui/button";
-import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
+import { Card, CardContent } from "@/components/ui/card";
 import { Progress } from "@/components/ui/progress";
 import { api } from "@/lib/api";
 import { errorMessage, useAuth } from "@/lib/auth";
-import { formatDate, formatDuration, joinParts, stageLabel } from "@/lib/format";
+import { formatDate, formatDuration, stageLabel } from "@/lib/format";
 import type { Dashboard } from "@/lib/types";
 import { cn } from "@/lib/utils";
 

@@ -1,4 +1,4 @@
-import { ArrowRight, History, PlayCircle, RefreshCw, SearchIcon, Sparkles, X } from "lucide-react";
+import { ArrowRight, RefreshCw, SearchIcon, Sparkles, X } from "lucide-react";
 import { useCallback, useEffect, useState } from "react";
 import { Link, useSearchParams } from "react-router-dom";
 import { ExportMenu } from "@/components/ExportMenu";
@@ -10,7 +10,7 @@ import {
   Thumbnail,
 } from "@/components/shared";
 import { Button } from "@/components/ui/button";
-import { Card, CardContent } from "@/components/ui/card";
+import { Card } from "@/components/ui/card";
 import { Input } from "@/components/ui/input";
 import {
   Select,
@@ -23,7 +23,6 @@ import { api } from "@/lib/api";
 import { errorMessage } from "@/lib/auth";
 import { formatDate, formatDuration, joinParts } from "@/lib/format";
 import type { SearchResponse } from "@/lib/types";
-import { cn } from "@/lib/utils";
 
 const PAGE_SIZE = 20;
 const ALL = "all";
@@ -72,7 +71,7 @@ function HighlightedText({ text, query }: { text: string; query: string }) {
 }
 
 export function SearchPage() {
-  const [searchParams, setSearchParams] = useSearchParams();
+  const [searchParams] = useSearchParams();
   const initialQuery = searchParams.get("q") ?? "";
   const initialPlatform = searchParams.get("platform") ?? ALL;
 

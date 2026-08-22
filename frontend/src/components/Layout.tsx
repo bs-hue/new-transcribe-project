@@ -1,8 +1,4 @@
 import {
-  ArrowUpRight,
-  Compass,
-  FileText,
-  History,
   LayoutDashboard,
   ListChecks,
   LogOut,
@@ -10,7 +6,6 @@ import {
   Plus,
   Search,
   Settings,
-  Sparkles,
   Video,
 } from "lucide-react";
 import { NavLink, Outlet } from "react-router-dom";

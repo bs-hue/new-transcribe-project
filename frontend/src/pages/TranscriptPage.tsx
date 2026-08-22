@@ -1,10 +1,10 @@
-import { ArrowLeft, Copy, Trash2 } from "lucide-react";
+import { ArrowLeft, Copy, FileText, Trash2 } from "lucide-react";
 import { useCallback, useEffect, useState } from "react";
 import { Link, useNavigate, useParams } from "react-router-dom";
 import { ExportMenu } from "@/components/ExportMenu";
 import { ErrorNotice, PlatformBadge, Spinner, StatusBadge } from "@/components/shared";
 import { Button } from "@/components/ui/button";
-import { Card, CardContent, CardHeader } from "@/components/ui/card";
+import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
 import { Tabs, TabsContent, TabsList, TabsTrigger } from "@/components/ui/tabs";
 import { api } from "@/lib/api";
 import { errorMessage } from "@/lib/auth";
@@ -17,6 +17,7 @@ export function TranscriptPage() {
 
   const [video, setVideo] = useState<VideoDetail | null>(null);
   const [copied, setCopied] = useState(false);
+  const [copiedDesc, setCopiedDesc] = useState(false);
   const [error, setError] = useState<string | null>(null);
   const [loading, setLoading] = useState(true);
 
