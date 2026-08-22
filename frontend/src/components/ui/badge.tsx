@@ -17,6 +17,8 @@ const badgeVariants = cva(
           "border-transparent bg-red-600 text-white font-medium shadow-sm drop-shadow-sm",
         instagram:
           "border-transparent bg-gradient-to-r from-purple-600 via-pink-600 to-amber-500 text-white font-medium shadow-sm drop-shadow-sm",
+        facebook:
+          "border-transparent bg-[#0866FF] text-white font-medium shadow-sm drop-shadow-sm",
       },
     },
     defaultVariants: { variant: "default" },

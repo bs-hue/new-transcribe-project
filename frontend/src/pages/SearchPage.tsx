@@ -189,6 +189,7 @@ export function SearchPage() {
               <SelectItem value={ALL}>All Platforms</SelectItem>
               <SelectItem value="youtube">YouTube</SelectItem>
               <SelectItem value="instagram">Instagram</SelectItem>
+              <SelectItem value="facebook">Meta Ads</SelectItem>
             </SelectContent>
           </Select>
 

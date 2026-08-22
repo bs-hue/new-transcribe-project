@@ -201,6 +201,10 @@ def _extract_sync(url: str, settings: Settings) -> dict[str, Any]:
     
     try:
         options = _ydl_options(settings)
+        if "facebook.com" in url.lower() or "fb.watch" in url.lower():
+            options.pop("proxy", None)
+            options["playlist_items"] = "1"
+
         if settings.youtube_cookies_text:
             fd, cookie_path = tempfile.mkstemp(suffix=".txt", text=True)
             with os.fdopen(fd, "w") as f:

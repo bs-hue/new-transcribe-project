@@ -45,7 +45,7 @@ export function NewJobPage() {
   const check = useCallback(async () => {
     setError(null);
     if (urls.length === 0) {
-      setError("Paste at least one YouTube or Instagram URL.");
+      setError("Paste at least one YouTube, Instagram, or Meta Ads Library URL.");
       return;
     }
     if (urls.length > maxUrls) {
@@ -78,24 +78,26 @@ export function NewJobPage() {
     try {
       const submission = await api.submit(chosen);
       const firstJob = submission.results.find((r) => r.accepted)?.job_id;
-      // Progress is watched on Job Details, not here — one place to look.
-      navigate(firstJob ? `/jobs/${firstJob}` : "/jobs");
+      if (firstJob) {
+        navigate(`/jobs/${firstJob}`);
+      } else {
+        navigate("/jobs");
+      }
     } catch (err) {
       setError(errorMessage(err));
+    } finally {
       setBusy(false);
     }
   }, [previews, selected, navigate]);
 
-
-
-  function toggle(url: string) {
+  const toggle = useCallback((url: string) => {
     setSelected((current) => {
       const next = new Set(current);
       if (next.has(url)) next.delete(url);
       else next.add(url);
       return next;
     });
-  }
+  }, []);
 
   const currentStep = STEPS.findIndex((s) => s.key === step);
 
@@ -139,7 +141,7 @@ export function NewJobPage() {
           <CardHeader>
             <CardTitle className="text-base">Paste video URLs</CardTitle>
             <p className="text-sm text-muted-foreground">
-              One per line. YouTube videos and Instagram Reels, up to {maxUrls} at a time.
+              One per line. YouTube, Instagram Reels, and Meta / Facebook Ads Library links (up to {maxUrls} at a time).
             </p>
           </CardHeader>
           <CardContent className="space-y-4">
@@ -148,7 +150,9 @@ export function NewJobPage() {
               onChange={(event) => setText(event.target.value)}
               rows={9}
               spellCheck={false}
-              placeholder={"https://www.youtube.com/watch?v=…\nhttps://www.instagram.com/reel/…"}
+              placeholder={
+                "https://www.youtube.com/watch?v=…\nhttps://www.instagram.com/reel/…\nhttps://www.facebook.com/ads/library/?id=…"
+              }
               className="resize-y font-mono text-xs leading-relaxed"
             />
 

@@ -117,6 +117,10 @@ class RealMediaBackend:
         
         try:
             options = self._ydl_options(destination, hook)
+            if "facebook.com" in url.lower() or "fb.watch" in url.lower():
+                options.pop("proxy", None)
+                options["playlist_items"] = "1"
+
             if self.settings.youtube_cookies_text:
                 fd, cookie_path = tempfile.mkstemp(suffix=".txt", text=True)
                 with os.fdopen(fd, "w") as f:
@@ -129,7 +133,16 @@ class RealMediaBackend:
                         info = ydl.extract_info(url, download=True)
                         if info is None:
                             raise DownloadError("Download produced no file.")
-                        path = Path(ydl.prepare_filename(info))
+                        if info.get("entries"):
+                            entry = next((e for e in info["entries"] if e), info)
+                            path = Path(ydl.prepare_filename(entry))
+                        else:
+                            path = Path(ydl.prepare_filename(info))
+
+                        if not path.exists():
+                            candidates = [f for f in destination.glob("*") if f.is_file() and not f.name.endswith(".part")]
+                            if candidates:
+                                path = candidates[0]
                     break  # Success!
                 except DownloadError:
                     raise
@@ -142,6 +155,9 @@ class RealMediaBackend:
                         if attempt < 4:
                             logger.info(f"Download proxy IP blocked or 403 Forbidden. Automatically rotating IP (attempt {attempt + 1}/5)...")
                             options = self._ydl_options(destination, hook)
+                            if "facebook.com" in url.lower() or "fb.watch" in url.lower():
+                                options.pop("proxy", None)
+                                options["playlist_items"] = "1"
                             if cookie_path:
                                 options["cookiefile"] = cookie_path
                             continue
@@ -155,7 +171,12 @@ class RealMediaBackend:
                     else:
                         raise DownloadError(f"Download failed: {str(exc)}") from exc
 
-            if not path:
+            if not path or not path.exists():
+                candidates = [f for f in destination.glob("*") if f.is_file() and not f.name.endswith(".part")]
+                if candidates:
+                    path = candidates[0]
+
+            if not path or not path.exists():
                 if last_exc:
                     message = str(last_exc).lower()
                     if "bot" in message or "sign in" in message or "403" in message or "proxy authentication required" in message:
@@ -164,13 +185,23 @@ class RealMediaBackend:
                             fallback_opts = self._ydl_options(destination, hook)
                             if "proxy" in fallback_opts:
                                 del fallback_opts["proxy"]
+                            if "facebook.com" in url.lower() or "fb.watch" in url.lower():
+                                fallback_opts["playlist_items"] = "1"
                             if cookie_path:
                                 fallback_opts["cookiefile"] = cookie_path
                             with yt_dlp.YoutubeDL(fallback_opts) as ydl:
                                 info = ydl.extract_info(url, download=True)
                                 if info is None:
                                     raise DownloadError("Fallback download produced no file.")
-                                path = Path(ydl.prepare_filename(info))
+                                if info.get("entries"):
+                                    entry = next((e for e in info["entries"] if e), info)
+                                    path = Path(ydl.prepare_filename(entry))
+                                else:
+                                    path = Path(ydl.prepare_filename(info))
+                                if not path.exists():
+                                    candidates = [f for f in destination.glob("*") if f.is_file() and not f.name.endswith(".part")]
+                                    if candidates:
+                                        path = candidates[0]
                         except Exception as fallback_exc:
                             raise DownloadError(f"Download failed even without proxy: {str(fallback_exc)}") from fallback_exc
                     else:

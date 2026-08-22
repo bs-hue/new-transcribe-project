@@ -123,6 +123,7 @@ export function HistoryPage() {
             <SelectItem value={ALL}>All platforms</SelectItem>
             <SelectItem value="youtube">YouTube</SelectItem>
             <SelectItem value="instagram">Instagram</SelectItem>
+            <SelectItem value="facebook">Meta Ads</SelectItem>
           </SelectContent>
         </Select>
 

@@ -10,12 +10,14 @@ from urllib.parse import urlparse, urlunparse
 
 from app.core.errors import InvalidURLError, UnsupportedURLError
 from app.platforms.base import ParsedURL, PlatformAdapter
+from app.platforms.facebook import FacebookAdapter
 from app.platforms.instagram import InstagramAdapter
 from app.platforms.youtube import YouTubeAdapter
 
 _ADAPTERS: tuple[PlatformAdapter, ...] = (
     YouTubeAdapter(),
     InstagramAdapter(),
+    FacebookAdapter(),
 )
 
 _ALLOWED_SCHEMES = {"http", "https"}

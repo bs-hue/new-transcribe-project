@@ -54,7 +54,7 @@ export function Layout() {
                   Transcription Hub
                 </span>
                 <span className="hidden text-[11px] text-muted-foreground font-normal sm:block">
-                  YouTube & Instagram AI
+                  YouTube, Instagram & Meta Ads
                 </span>
               </div>
             </NavLink>
@@ -163,7 +163,7 @@ export function Layout() {
             <span>Transcription Hub · Open Source Local AI</span>
           </div>
           <p className="text-[11px]">
-            Fast segment-level transcription for YouTube & Instagram videos
+            Fast segment-level transcription for YouTube, Instagram & Meta Ads Library
           </p>
         </div>
       </footer>

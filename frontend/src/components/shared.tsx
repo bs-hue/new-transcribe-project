@@ -10,12 +10,20 @@ import { cn } from "@/lib/utils";
 const PLATFORM_LABELS: Record<string, string> = {
   youtube: "YouTube",
   instagram: "Instagram",
+  facebook: "Meta Ads",
+  meta: "Meta Ads",
 };
 
 export function PlatformBadge({ platform }: { platform: string | null | undefined }) {
   if (!platform) return null;
-  const variant = platform === "youtube" || platform === "instagram" ? platform : "secondary";
-  return <Badge variant={variant}>{PLATFORM_LABELS[platform] ?? platform}</Badge>;
+  const p = platform.toLowerCase();
+  const variant =
+    p === "youtube" || p === "instagram" || p === "facebook"
+      ? (p as "youtube" | "instagram" | "facebook")
+      : p === "meta"
+        ? "facebook"
+        : "secondary";
+  return <Badge variant={variant}>{PLATFORM_LABELS[p] ?? platform}</Badge>;
 }
 
 const STATUS_VARIANTS = {

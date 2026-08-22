@@ -124,6 +124,36 @@ export function TranscriptPage() {
         </CardHeader>
       </Card>
 
+      {/* Ad Copy / Primary Text Card for Account Managers & Media Buyers */}
+      {video.description ? (
+        <Card className="border-border/60 shadow-sm">
+          <CardHeader className="flex-row items-center justify-between gap-4 py-3 px-5 border-b bg-muted/20">
+            <div className="flex items-center gap-2">
+              <FileText className="h-4 w-4 text-primary" />
+              <CardTitle className="text-sm font-semibold">
+                {video.platform === "facebook" ? "Ad Creative Copy / Primary Text" : "Video Caption / Description"}
+              </CardTitle>
+            </div>
+            <Button
+              variant="ghost"
+              size="sm"
+              className="h-7 text-xs gap-1.5"
+              onClick={() => {
+                void navigator.clipboard.writeText(video.description || "");
+                setCopiedDesc(true);
+                setTimeout(() => setCopiedDesc(false), 2000);
+              }}
+            >
+              <Copy className="h-3.5 w-3.5" />
+              <span>{copiedDesc ? "Copied" : "Copy copy"}</span>
+            </Button>
+          </CardHeader>
+          <CardContent className="p-5 text-sm text-foreground/90 whitespace-pre-wrap leading-relaxed max-h-60 overflow-y-auto font-sans">
+            {video.description}
+          </CardContent>
+        </Card>
+      ) : null}
+
       {!transcript ? (
         <JobStatusPanel job={video.latest_job} onRetried={load} />
       ) : (
