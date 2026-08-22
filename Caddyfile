@@ -45,6 +45,8 @@
 	}
 
 	header {
+		# Tell search engines not to index this private application
+		X-Robots-Tag "noindex, nofollow, noarchive"
 		# Tell browsers to stay on HTTPS for this host.
 		Strict-Transport-Security "max-age=31536000; includeSubDomains"
 		X-Content-Type-Options "nosniff"
