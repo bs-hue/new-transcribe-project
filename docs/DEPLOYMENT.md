@@ -181,7 +181,7 @@ gap is not configuration:
 | Missing | Why it matters |
 |---|---|
 | Registration flow | There is no public signup endpoint. Accounts are created by an admin (`POST /api/auth/users`) or the CLI. |
-| Email verification | Nothing sends email, so addresses cannot be confirmed. |
+| Email verification | The email service is built, but address verification on signup is pending. |
 | Per-user quotas | Nothing caps how much any one account transcribes. With Sarvam, that is your money; with local transcription, it is your CPU. |
 | Rate limiting | No limit on requests, including on `/api/auth/login`, which is what makes password guessing slow. |
 | Abuse handling | No way to suspend an account mid-abuse beyond deleting it. |

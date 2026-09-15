@@ -4,12 +4,17 @@ import {
   Calendar,
   CheckCircle2,
   Clock,
+  KeyRound,
   Library,
   Loader2,
+  Lock,
+  Mail,
   PlayCircle,
   Plus,
   RefreshCw,
   Search,
+  Shield,
+  ShieldCheck,
   User,
 } from "lucide-react";
 import { useCallback, useEffect, useState } from "react";
@@ -23,6 +28,8 @@ import {
 } from "@/components/shared";
 import { Button } from "@/components/ui/button";
 import { Card, CardContent } from "@/components/ui/card";
+import { Input } from "@/components/ui/input";
+import { Label } from "@/components/ui/label";
 import { Progress } from "@/components/ui/progress";
 import { api } from "@/lib/api";
 import { errorMessage, useAuth } from "@/lib/auth";
@@ -371,7 +378,227 @@ export function DashboardPage() {
           )}
         </>
       )}
+
+      {/* Account & Security Section */}
+      <AccountSecuritySection user={user} />
     </div>
+  );
+}
+
+function AccountSecuritySection({ user }: { user: any }) {
+  const [currentPassword, setCurrentPassword] = useState("");
+  const [newPassword, setNewPassword] = useState("");
+  const [confirmPassword, setConfirmPassword] = useState("");
+  const [busy, setBusy] = useState(false);
+  const [error, setError] = useState<string | null>(null);
+  const [success, setSuccess] = useState<string | null>(null);
+
+  const [emailBusy, setEmailBusy] = useState(false);
+  const [emailSuccess, setEmailSuccess] = useState<string | null>(null);
+  const [emailError, setEmailError] = useState<string | null>(null);
+
+  async function handleChangePassword(e: React.FormEvent) {
+    e.preventDefault();
+    setError(null);
+    setSuccess(null);
+
+    if (newPassword.length < 8) {
+      setError("New password must be at least 8 characters long.");
+      return;
+    }
+    if (newPassword !== confirmPassword) {
+      setError("New passwords do not match.");
+      return;
+    }
+
+    setBusy(true);
+    try {
+      await api.changePassword(currentPassword, newPassword);
+      setSuccess("Your password has been changed successfully.");
+      setCurrentPassword("");
+      setNewPassword("");
+      setConfirmPassword("");
+    } catch (err) {
+      setError(errorMessage(err, "Failed to change password. Please check your current password."));
+    } finally {
+      setBusy(false);
+    }
+  }
+
+  async function handleSendResetLink() {
+    if (!user?.email) return;
+    setEmailBusy(true);
+    setEmailError(null);
+    setEmailSuccess(null);
+    try {
+      await api.forgotPassword(user.email);
+      setEmailSuccess(`Password reset link dispatched to ${user.email}.`);
+    } catch (err) {
+      setEmailError(errorMessage(err, "Failed to send reset link to your email."));
+    } finally {
+      setEmailBusy(false);
+    }
+  }
+
+  return (
+    <section className="pt-6 border-t border-border/40 space-y-4">
+      <div className="flex flex-col sm:flex-row sm:items-center justify-between gap-2">
+        <div className="space-y-0.5">
+          <h2 className="font-heading text-lg sm:text-xl font-bold tracking-tight text-foreground flex items-center gap-2">
+            <Shield className="h-5 w-5 text-primary" />
+            Account &amp; Security
+          </h2>
+          <p className="text-xs text-muted-foreground">
+            View account profile, update your password, or dispatch a recovery link to your email.
+          </p>
+        </div>
+      </div>
+
+      <div className="grid grid-cols-1 md:grid-cols-3 gap-4">
+        {/* User Info & Email Reset Card */}
+        <Card className="p-4 sm:p-5 border border-border/80 bg-card flex flex-col justify-between space-y-4">
+          <div className="space-y-3">
+            <div className="flex items-center gap-3">
+              <span className="flex h-11 w-11 items-center justify-center rounded-xl bg-primary/10 text-primary border border-primary/20 font-bold text-base uppercase">
+                {(user?.full_name || user?.email || "U")[0]}
+              </span>
+              <div className="space-y-0.5 overflow-hidden">
+                <p className="font-heading font-medium text-sm text-foreground truncate">
+                  {user?.full_name || "Signed-in User"}
+                </p>
+                <p className="text-xs text-muted-foreground truncate">{user?.email}</p>
+              </div>
+            </div>
+
+            <div className="pt-2 border-t border-border/40 space-y-1.5 text-xs text-muted-foreground">
+              <div className="flex items-center justify-between">
+                <span>Account Role</span>
+                <span className="font-medium text-foreground capitalize px-2 py-0.5 rounded bg-muted/60 text-[11px]">
+                  {user?.role || "member"}
+                </span>
+              </div>
+              <div className="flex items-center justify-between">
+                <span>Status</span>
+                <span className="font-medium text-emerald-600 dark:text-emerald-400 flex items-center gap-1 text-[11px]">
+                  <span className="h-1.5 w-1.5 rounded-full bg-emerald-500 inline-block" />
+                  Active
+                </span>
+              </div>
+            </div>
+          </div>
+
+          <div className="space-y-2 pt-2 border-t border-border/40">
+            <p className="text-xs text-muted-foreground">
+              Need to reset password via email?
+            </p>
+            {emailSuccess && (
+              <div className="p-2.5 rounded-lg bg-emerald-500/10 border border-emerald-500/20 text-xs text-emerald-800 dark:text-emerald-300 flex items-start gap-1.5">
+                <CheckCircle2 className="h-3.5 w-3.5 mt-0.5 text-emerald-600 dark:text-emerald-400 shrink-0" />
+                <span>{emailSuccess}</span>
+              </div>
+            )}
+            {emailError && (
+              <div className="p-2.5 rounded-lg bg-destructive/10 border border-destructive/20 text-xs text-destructive flex items-start gap-1.5">
+                <AlertTriangle className="h-3.5 w-3.5 mt-0.5 shrink-0" />
+                <span>{emailError}</span>
+              </div>
+            )}
+            <Button
+              type="button"
+              variant="outline"
+              size="sm"
+              onClick={handleSendResetLink}
+              disabled={emailBusy}
+              className="w-full text-xs font-medium gap-1.5 h-8 sm:h-9"
+            >
+              <Mail className="h-3.5 w-3.5 text-primary" />
+              <span>{emailBusy ? "Sending link…" : "Email Me Reset Link"}</span>
+            </Button>
+          </div>
+        </Card>
+
+        {/* Change Password Card */}
+        <Card className="p-4 sm:p-5 border border-border/80 bg-card md:col-span-2">
+          <div className="space-y-3">
+            <div className="flex items-center gap-2">
+              <KeyRound className="h-4 w-4 text-primary" />
+              <h3 className="font-heading font-medium text-sm text-foreground">
+                Change Password
+              </h3>
+            </div>
+            <p className="text-xs text-muted-foreground">
+              Update your account password directly. Passwords must be at least 8 characters.
+            </p>
+
+            <form onSubmit={handleChangePassword} className="space-y-3 pt-1">
+              <ErrorNotice message={error} />
+              {success && (
+                <div className="p-2.5 rounded-lg bg-emerald-500/10 border border-emerald-500/20 text-xs text-emerald-800 dark:text-emerald-300 flex items-center gap-1.5">
+                  <ShieldCheck className="h-3.5 w-3.5 text-emerald-600 dark:text-emerald-400 shrink-0" />
+                  <span>{success}</span>
+                </div>
+              )}
+
+              <div className="grid grid-cols-1 sm:grid-cols-3 gap-3">
+                <div className="space-y-1">
+                  <Label htmlFor="dash-current-password" className="text-xs">Current Password</Label>
+                  <Input
+                    id="dash-current-password"
+                    type="password"
+                    autoComplete="current-password"
+                    required
+                    value={currentPassword}
+                    onChange={(e) => setCurrentPassword(e.target.value)}
+                    className="h-8 sm:h-9 text-xs"
+                    placeholder="••••••••"
+                  />
+                </div>
+
+                <div className="space-y-1">
+                  <Label htmlFor="dash-new-password" className="text-xs">New Password</Label>
+                  <Input
+                    id="dash-new-password"
+                    type="password"
+                    autoComplete="new-password"
+                    required
+                    value={newPassword}
+                    onChange={(e) => setNewPassword(e.target.value)}
+                    className="h-8 sm:h-9 text-xs"
+                    placeholder="Min 8 chars"
+                  />
+                </div>
+
+                <div className="space-y-1">
+                  <Label htmlFor="dash-confirm-password" className="text-xs">Confirm New Password</Label>
+                  <Input
+                    id="dash-confirm-password"
+                    type="password"
+                    autoComplete="new-password"
+                    required
+                    value={confirmPassword}
+                    onChange={(e) => setConfirmPassword(e.target.value)}
+                    className="h-8 sm:h-9 text-xs"
+                    placeholder="Repeat new password"
+                  />
+                </div>
+              </div>
+
+              <div className="flex justify-end pt-1">
+                <Button
+                  type="submit"
+                  size="sm"
+                  disabled={busy || !currentPassword || !newPassword || !confirmPassword}
+                  className="text-xs font-medium h-8 sm:h-9 gap-1.5 px-4"
+                >
+                  <Lock className="h-3.5 w-3.5" />
+                  <span>{busy ? "Updating…" : "Update Password"}</span>
+                </Button>
+              </div>
+            </form>
+          </div>
+        </Card>
+      </div>
+    </section>
   );
 }
 

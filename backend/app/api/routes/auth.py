@@ -7,18 +7,28 @@ from sqlalchemy import select
 
 from app.api.deps import AdminUser, AppSettings, CurrentUser, DbSession
 from app.core.errors import ForbiddenError, NotFoundError
-from app.core.security import create_access_token, hash_password, verify_password
+from app.core.security import (
+    create_access_token,
+    create_password_reset_token,
+    hash_password,
+    verify_password,
+    verify_password_reset_token,
+)
 from app.db.models import User, UserRole
 from app.schemas import (
+    ForgotPasswordRequest,
     LoginRequest,
     PasswordChangeRequest,
     RegisterRequest,
+    ResetPasswordRequest,
+    StatusMessageResponse,
     TokenResponse,
     UserCreateRequest,
     UserResponse,
     UserUpdateRequest,
 )
-from app.services.users import approve, authenticate, create_user, register
+from app.services.email import send_password_reset_email
+from app.services.users import approve, authenticate, create_user, get_by_email, register
 
 router = APIRouter(prefix="/auth", tags=["auth"])
 
@@ -65,6 +75,55 @@ async def register_account(
     )
     await session.commit()
     return UserResponse.model_validate(user)
+
+
+@router.post("/forgot-password", response_model=StatusMessageResponse)
+async def forgot_password(
+    payload: ForgotPasswordRequest,
+    session: DbSession,
+    settings: AppSettings,
+) -> StatusMessageResponse:
+    """Send a password reset link to the user's email."""
+    email = payload.email.strip().lower()
+    user = await get_by_email(session, email)
+
+    # Return standard message even if user doesn't exist (anti-enumeration)
+    standard_message = (
+        "If an account exists with this email, a password reset link has been sent."
+    )
+
+    if user and user.is_active:
+        token = create_password_reset_token(
+            user.email, pwd_hash=user.hashed_password, settings=settings
+        )
+        base_url = settings.frontend_base_url.rstrip("/")
+        reset_link = f"{base_url}/reset-password?token={token}"
+        await send_password_reset_email(user.email, reset_link, settings=settings)
+
+    return StatusMessageResponse(message=standard_message)
+
+
+@router.post("/reset-password", response_model=StatusMessageResponse)
+async def reset_password(
+    payload: ResetPasswordRequest,
+    session: DbSession,
+    settings: AppSettings,
+) -> StatusMessageResponse:
+    """Reset password using a valid token."""
+    email, pvh = verify_password_reset_token(payload.token, settings=settings)
+    user = await get_by_email(session, email)
+    if user is None or not user.is_active:
+        raise NotFoundError("Account not found or inactive.")
+    if pvh and user.hashed_password[:12] != pvh:
+        raise ForbiddenError("This password reset link has already been used. Please request a new one.")
+
+    user.hashed_password = hash_password(payload.new_password)
+    session.add(user)
+    await session.commit()
+
+    return StatusMessageResponse(
+        message="Your password has been successfully reset. You can now sign in with your new password."
+    )
 
 
 @router.get("/me", response_model=UserResponse)

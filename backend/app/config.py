@@ -62,6 +62,17 @@ class Settings(BaseSettings):
     # * ``open``     â€” anyone may sign up and use it immediately. Only sensible
     #   once per-account limits exist, since transcription costs real money.
     registration_mode: Literal["closed", "approval", "open"] = "closed"
+    password_reset_token_expire_minutes: int = 30
+
+    # --- Email / SMTP ---
+    smtp_host: str | None = None
+    smtp_port: int = 587
+    smtp_user: str | None = None
+    smtp_password: str | None = None
+    smtp_from_email: str = "noreply@bulktranscript.local"
+    smtp_from_name: str = "Content Research Hub"
+    smtp_tls: bool = True
+    frontend_base_url: str = "http://localhost:5173"
 
     #: The commit this image was built from, stamped in by the build.
     #:

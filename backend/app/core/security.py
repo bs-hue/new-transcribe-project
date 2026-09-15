@@ -98,3 +98,43 @@ def decode_access_token(token: str, settings: Settings | None = None) -> dict[st
         raise AuthError("Your session has expired. Please sign in again.") from exc
     except jwt.InvalidTokenError as exc:
         raise AuthError("Invalid authentication token.") from exc
+
+
+def create_password_reset_token(
+    email: str,
+    pwd_hash: str | None = None,
+    settings: Settings | None = None,
+) -> str:
+    """Generate a signed, short-lived token for password recovery."""
+    settings = settings or get_settings()
+    now = datetime.now(UTC)
+    payload: dict[str, Any] = {
+        "sub": email.strip().lower(),
+        "type": "password_reset",
+        "pvh": pwd_hash[:12] if pwd_hash else None,
+        "iat": now,
+        "exp": now + timedelta(minutes=settings.password_reset_token_expire_minutes),
+    }
+    return jwt.encode(payload, settings.jwt_secret, algorithm=settings.jwt_algorithm)
+
+
+def verify_password_reset_token(
+    token: str, settings: Settings | None = None
+) -> tuple[str, str | None]:
+    """Verify a password reset token and return (email, pwd_hash_prefix)."""
+    settings = settings or get_settings()
+    try:
+        payload = jwt.decode(
+            token,
+            settings.jwt_secret,
+            algorithms=[settings.jwt_algorithm],
+        )
+    except jwt.ExpiredSignatureError as exc:
+        raise AuthError("Password reset link has expired. Please request a new one.") from exc
+    except jwt.InvalidTokenError as exc:
+        raise AuthError("Invalid password reset link.") from exc
+
+    if payload.get("type") != "password_reset" or not payload.get("sub"):
+        raise AuthError("Invalid password reset token.")
+
+    return str(payload["sub"]), payload.get("pvh")

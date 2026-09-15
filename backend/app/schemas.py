@@ -86,6 +86,19 @@ class PasswordChangeRequest(BaseModel):
     new_password: Annotated[str, Field(min_length=8, max_length=72)]
 
 
+class ForgotPasswordRequest(BaseModel):
+    email: str
+
+
+class ResetPasswordRequest(BaseModel):
+    token: str
+    new_password: Annotated[str, Field(min_length=8, max_length=72)]
+
+
+class StatusMessageResponse(BaseModel):
+    message: str
+
+
 # --- submission --------------------------------------------------------------
 
 
