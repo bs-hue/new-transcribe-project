@@ -25,6 +25,8 @@ Click the link below to set a new password (valid for {expire_minutes} minutes):
 
 If you did not request this password reset, you can safely ignore this email. Your account remains secure.
 
+**Please check your spam folder as well, it might go there 📧**
+
 Best regards,
 The {app_name} Team
 """
@@ -109,6 +111,7 @@ The {app_name} Team
         <a href="{reset_link}" class="btn" target="_blank">Reset Password</a>
       </div>
       <p style="font-size: 13px; color: #64748b;">This link will expire in <strong>{expire_minutes} minutes</strong>. If you did not request a password change, please ignore this email.</p>
+      <p style="font-size: 13px; color: #b91c1c;"><strong>Please check your spam folder as well, it might go there 📧</strong></p>
       <hr style="border: none; border-top: 1px solid #e2e8f0; margin: 24px 0;" />
       <p style="font-size: 12px; color: #64748b;">If the button doesn't work, copy and paste this link into your browser:</p>
       <p><a href="{reset_link}" class="break-link">{reset_link}</a></p>
