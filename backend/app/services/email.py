@@ -141,6 +141,9 @@ def _send_smtp_sync(
     msg["From"] = from_header
     msg["To"] = to_email
 
+    if not settings.smtp_host:
+        return
+
     msg.set_content(plain_content)
     msg.add_alternative(html_content, subtype="html")
 
