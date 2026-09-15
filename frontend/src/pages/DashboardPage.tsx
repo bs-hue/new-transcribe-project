@@ -34,7 +34,7 @@ import { Progress } from "@/components/ui/progress";
 import { api } from "@/lib/api";
 import { errorMessage, useAuth } from "@/lib/auth";
 import { formatDate, formatDuration, stageLabel } from "@/lib/format";
-import type { Dashboard } from "@/lib/types";
+import type { Dashboard, User } from "@/lib/types";
 import { cn } from "@/lib/utils";
 
 const POLL_INTERVAL_MS = 2500;
@@ -385,7 +385,7 @@ export function DashboardPage() {
   );
 }
 
-function AccountSecuritySection({ user }: { user: any }) {
+function AccountSecuritySection({ user }: { user: User | null }) {
   const [currentPassword, setCurrentPassword] = useState("");
   const [newPassword, setNewPassword] = useState("");
   const [confirmPassword, setConfirmPassword] = useState("");

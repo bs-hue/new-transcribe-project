@@ -1,7 +1,6 @@
 """Apify integration for transcript fetching."""
 
 import logging
-from typing import Any
 
 import httpx
 

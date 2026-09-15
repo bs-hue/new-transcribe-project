@@ -3,9 +3,9 @@
 from __future__ import annotations
 
 import asyncio
-from email.message import EmailMessage
 import logging
 import smtplib
+from email.message import EmailMessage
 
 from app.config import Settings, get_settings
 

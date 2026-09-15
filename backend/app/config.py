@@ -8,7 +8,7 @@ from __future__ import annotations
 
 from functools import lru_cache
 from pathlib import Path
-from typing import Annotated, Literal, Optional
+from typing import Annotated, Literal
 
 from pydantic import Field, field_validator
 from pydantic_settings import BaseSettings, NoDecode, SettingsConfigDict
@@ -140,10 +140,10 @@ class Settings(BaseSettings):
     ffmpeg_binary: str = "ffmpeg"
     ffprobe_binary: str = "ffprobe"
     keep_media: bool = False
-    youtube_proxy: Optional[str] = None
-    webshare_token: Optional[str] = None
-    youtube_cookies_text: Optional[str] = None
-    apify_api_token: Optional[str] = None
+    youtube_proxy: str | None = None
+    webshare_token: str | None = None
+    youtube_cookies_text: str | None = None
+    apify_api_token: str | None = None
 
     # --- Worker ---
     worker_enabled: bool = True

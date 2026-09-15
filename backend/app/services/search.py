@@ -300,7 +300,7 @@ class LikeSearchBackend(SearchBackend):
             where = where_tokens
         else:
             # Only filter_str, which starts with " AND "
-            where = filter_str.lstrip(" AND ")
+            where = filter_str[5:] if filter_str.startswith(" AND ") else filter_str
 
         base = f"FROM transcripts t JOIN videos v ON v.id = t.video_id WHERE {where}"
 

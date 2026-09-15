@@ -2,9 +2,9 @@
 
 from __future__ import annotations
 
+import asyncio
 import logging
 import sys
-import asyncio
 from collections.abc import AsyncIterator
 
 if sys.platform == "win32":

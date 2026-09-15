@@ -7,6 +7,7 @@ items from a batch before any transfer starts.
 
 from __future__ import annotations
 
+import contextlib
 import logging
 from dataclasses import dataclass, field
 from datetime import UTC, datetime
@@ -192,8 +193,8 @@ def _extract_sync(url: str, settings: Settings) -> dict[str, Any]:
     except ImportError as exc:  # pragma: no cover - dependency is declared
         raise MetadataError("yt-dlp is not installed on the server.") from exc
 
-    import tempfile
     import os
+    import tempfile
     
     cookie_path = None
     info = None
@@ -267,10 +268,8 @@ def _extract_sync(url: str, settings: Settings) -> dict[str, Any]:
         return info
     finally:
         if cookie_path and os.path.exists(cookie_path):
-            try:
+            with contextlib.suppress(OSError):
                 os.remove(cookie_path)
-            except OSError:
-                pass
 
 
 async def fetch_metadata(parsed: ParsedURL, settings: Settings | None = None) -> VideoMetadata:
@@ -294,7 +293,7 @@ async def fetch_metadata(parsed: ParsedURL, settings: Settings | None = None) ->
             anyio.to_thread.run_sync(_extract_sync, parsed.canonical_url, settings),
             timeout=45.0
         )
-    except asyncio.TimeoutError:
+    except TimeoutError:
         raise MetadataError(
             "Connection timed out while checking the video. The platform or proxy is unresponsive. Please try again.",
             details={"url": parsed.canonical_url}

@@ -108,8 +108,8 @@ class RealMediaBackend:
         except ImportError as exc:  # pragma: no cover
             raise DownloadError("yt-dlp is not installed on the server.") from exc
 
-        import tempfile
         import os
+        import tempfile
         
         cookie_path = None
         last_exc = None
@@ -224,10 +224,8 @@ class RealMediaBackend:
             return path
         finally:
             if cookie_path and os.path.exists(cookie_path):
-                try:
+                with suppress(OSError):
                     os.remove(cookie_path)
-                except OSError:
-                    pass
 
     async def download_video(
         self, url: str, destination: Path, on_progress: ProgressCallback | None = None
@@ -259,7 +257,7 @@ class RealMediaBackend:
         import httpx
         
         # Use the synchronous wait endpoint for the epctex YouTube Downloader actor
-        api_url = f"https://api.apify.com/v2/acts/epctex~youtube-video-downloader/run-sync-get-dataset-items"
+        api_url = "https://api.apify.com/v2/acts/epctex~youtube-video-downloader/run-sync-get-dataset-items"
         params = {"token": self.settings.apify_api_token}
         
         # Payload according to the actor's schema
@@ -295,8 +293,7 @@ class RealMediaBackend:
 
         file_path = destination / "source.mp4"
         
-        async with httpx.AsyncClient(timeout=300) as client:
-            async with client.stream("GET", storage_url) as stream_resp:
+        async with httpx.AsyncClient(timeout=300) as client, client.stream("GET", storage_url) as stream_resp:
                 if stream_resp.status_code != 200:
                     raise DownloadError(f"Failed to download media from Apify storage (HTTP {stream_resp.status_code})")
                 async with await anyio.open_file(file_path, "wb") as f:
@@ -316,8 +313,7 @@ class RealMediaBackend:
             try:
                 result = subprocess.run(
                     args,
-                    stdout=subprocess.PIPE,
-                    stderr=subprocess.PIPE,
+                    capture_output=True,
                 )
             except FileNotFoundError as exc:
                 raise AudioExtractionError(

@@ -27,8 +27,9 @@ VERSION = "1.0.0"
 
 @public_router.get("/debug-proxy")
 async def debug_proxy(settings: AppSettings):
-    import httpx
     import traceback
+
+    import httpx
     
     debug_log = []
     

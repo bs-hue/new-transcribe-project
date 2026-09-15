@@ -1,6 +1,8 @@
-import time
-import httpx
 import logging
+import time
+
+import httpx
+
 from app.config import get_settings
 from app.core.errors import AppError
 
