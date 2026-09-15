@@ -116,10 +116,14 @@ async def batch_status(batch_id: str, session: DbSession) -> BatchStatusResponse
 @router.get("/{job_id}", response_model=JobDetail)
 async def get_job(job_id: str, session: DbSession) -> JobDetail:
     job = (
-        await session.execute(
-            select(Job).options(selectinload(Job.video)).where(Job.id == job_id)
+        (
+            await session.execute(
+                select(Job).options(selectinload(Job.video)).where(Job.id == job_id)
+            )
         )
-    ).unique().scalar_one_or_none()
+        .unique()
+        .scalar_one_or_none()
+    )
     if job is None:
         raise NotFoundError(f"No job with id {job_id}.")
     return await _to_detail(session, job)

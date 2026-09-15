@@ -67,9 +67,7 @@ async def bulk_export(
     payload: BulkExportRequest, session: DbSession, settings: AppSettings
 ) -> Response:
     if not (payload.transcript_ids or payload.video_ids or payload.query):
-        raise ExportFormatError(
-            "Specify transcript_ids, video_ids, or a query to export."
-        )
+        raise ExportFormatError("Specify transcript_ids, video_ids, or a query to export.")
 
     transcript_ids = await _resolve_transcript_ids(session, payload, settings)
     if not transcript_ids:
@@ -89,8 +87,7 @@ async def bulk_export(
         media_type=content_type,
         headers={
             "Content-Disposition": (
-                f'attachment; filename="{ascii_fallback}"; '
-                f"filename*=UTF-8''{quote(filename)}"
+                f"attachment; filename=\"{ascii_fallback}\"; filename*=UTF-8''{quote(filename)}"
             )
         },
     )

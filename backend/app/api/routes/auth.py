@@ -34,9 +34,7 @@ router = APIRouter(prefix="/auth", tags=["auth"])
 
 
 @router.post("/login", response_model=TokenResponse)
-async def login(
-    payload: LoginRequest, session: DbSession, settings: AppSettings
-) -> TokenResponse:
+async def login(payload: LoginRequest, session: DbSession, settings: AppSettings) -> TokenResponse:
     user = await authenticate(session, payload.email, payload.password)
     token, expires_in = create_access_token(user.id, role=user.role, settings=settings)
     return TokenResponse(
@@ -88,9 +86,7 @@ async def forgot_password(
     user = await get_by_email(session, email)
 
     # Return standard message even if user doesn't exist (anti-enumeration)
-    standard_message = (
-        "If an account exists with this email, a password reset link has been sent."
-    )
+    standard_message = "If an account exists with this email, a password reset link has been sent."
 
     if user and user.is_active:
         token = create_password_reset_token(
@@ -115,7 +111,9 @@ async def reset_password(
     if user is None or not user.is_active:
         raise NotFoundError("Account not found or inactive.")
     if pvh and user.hashed_password[:12] != pvh:
-        raise ForbiddenError("This password reset link has already been used. Please request a new one.")
+        raise ForbiddenError(
+            "This password reset link has already been used. Please request a new one."
+        )
 
     user.hashed_password = hash_password(payload.new_password)
     session.add(user)
@@ -150,9 +148,7 @@ async def change_password(
 
 @router.get("/users", response_model=list[UserResponse])
 async def list_users(session: DbSession, _admin: AdminUser) -> list[UserResponse]:
-    users = (
-        (await session.execute(select(User).order_by(User.created_at))).scalars().all()
-    )
+    users = (await session.execute(select(User).order_by(User.created_at))).scalars().all()
     return [UserResponse.model_validate(user) for user in users]
 
 
@@ -201,9 +197,7 @@ async def update_user(
 
 
 @router.post("/users/{user_id}/approve", response_model=UserResponse)
-async def approve_user(
-    user_id: str, session: DbSession, _admin: AdminUser
-) -> UserResponse:
+async def approve_user(user_id: str, session: DbSession, _admin: AdminUser) -> UserResponse:
     """Let a waiting account in. Idempotent, so a double-click is harmless."""
     user = await session.get(User, user_id)
     if user is None:

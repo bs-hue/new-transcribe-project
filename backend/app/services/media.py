@@ -97,6 +97,7 @@ class RealMediaBackend:
         }
 
         from app.services.proxy import get_random_proxy
+
         proxy = get_random_proxy()
         if proxy:
             options["proxy"] = proxy
@@ -110,11 +111,11 @@ class RealMediaBackend:
 
         import os
         import tempfile
-        
+
         cookie_path = None
         last_exc = None
         path = None
-        
+
         try:
             options = self._ydl_options(destination, hook)
             if "facebook.com" in url.lower() or "fb.watch" in url.lower():
@@ -140,7 +141,11 @@ class RealMediaBackend:
                             path = Path(ydl.prepare_filename(info))
 
                         if not path.exists():
-                            candidates = [f for f in destination.glob("*") if f.is_file() and not f.name.endswith(".part")]
+                            candidates = [
+                                f
+                                for f in destination.glob("*")
+                                if f.is_file() and not f.name.endswith(".part")
+                            ]
                             if candidates:
                                 path = candidates[0]
                     break  # Success!
@@ -149,11 +154,18 @@ class RealMediaBackend:
                 except Exception as exc:
                     last_exc = exc
                     message = str(exc).lower()
-                    # If we get a bot check or 403 Forbidden, the proxy IP is blocked. 
+                    # If we get a bot check or 403 Forbidden, the proxy IP is blocked.
                     # Since we use a rotating proxy, retrying grabs a fresh IP.
-                    if ("bot" in message or "sign in" in message or "403" in message or "proxy authentication required" in message):
+                    if (
+                        "bot" in message
+                        or "sign in" in message
+                        or "403" in message
+                        or "proxy authentication required" in message
+                    ):
                         if attempt < 4:
-                            logger.info(f"Download proxy IP blocked or 403 Forbidden. Automatically rotating IP (attempt {attempt + 1}/5)...")
+                            logger.info(
+                                f"Download proxy IP blocked or 403 Forbidden. Automatically rotating IP (attempt {attempt + 1}/5)..."
+                            )
                             options = self._ydl_options(destination, hook)
                             if "facebook.com" in url.lower() or "fb.watch" in url.lower():
                                 options.pop("proxy", None)
@@ -162,7 +174,7 @@ class RealMediaBackend:
                                 options["cookiefile"] = cookie_path
                             continue
                         else:
-                            pass # Let it fall out of the loop and trigger the fallback
+                            pass  # Let it fall out of the loop and trigger the fallback
                     elif "private" in message or "unavailable" in message or "removed" in message:
                         raise VideoUnavailableError(
                             "This video is unavailable — it may be private, deleted, or region-locked.",
@@ -172,15 +184,24 @@ class RealMediaBackend:
                         raise DownloadError(f"Download failed: {str(exc)}") from exc
 
             if not path or not path.exists():
-                candidates = [f for f in destination.glob("*") if f.is_file() and not f.name.endswith(".part")]
+                candidates = [
+                    f for f in destination.glob("*") if f.is_file() and not f.name.endswith(".part")
+                ]
                 if candidates:
                     path = candidates[0]
 
             if not path or not path.exists():
                 if last_exc:
                     message = str(last_exc).lower()
-                    if "bot" in message or "sign in" in message or "403" in message or "proxy authentication required" in message:
-                        logger.warning("All proxy attempts were blocked by YouTube. Falling back to direct connection (NO PROXY)...")
+                    if (
+                        "bot" in message
+                        or "sign in" in message
+                        or "403" in message
+                        or "proxy authentication required" in message
+                    ):
+                        logger.warning(
+                            "All proxy attempts were blocked by YouTube. Falling back to direct connection (NO PROXY)..."
+                        )
                         try:
                             fallback_opts = self._ydl_options(destination, hook)
                             if "proxy" in fallback_opts:
@@ -199,11 +220,17 @@ class RealMediaBackend:
                                 else:
                                     path = Path(ydl.prepare_filename(info))
                                 if not path.exists():
-                                    candidates = [f for f in destination.glob("*") if f.is_file() and not f.name.endswith(".part")]
+                                    candidates = [
+                                        f
+                                        for f in destination.glob("*")
+                                        if f.is_file() and not f.name.endswith(".part")
+                                    ]
                                     if candidates:
                                         path = candidates[0]
                         except Exception as fallback_exc:
-                            raise DownloadError(f"Download failed even without proxy: {str(fallback_exc)}") from fallback_exc
+                            raise DownloadError(
+                                f"Download failed even without proxy: {str(fallback_exc)}"
+                            ) from fallback_exc
                     else:
                         raise DownloadError(f"Download failed after retries: {str(last_exc)}")
                 else:
@@ -255,50 +282,56 @@ class RealMediaBackend:
 
     async def _download_youtube_apify(self, url: str, destination: Path) -> Path:
         import httpx
-        
+
         # Use the synchronous wait endpoint for the epctex YouTube Downloader actor
         api_url = "https://api.apify.com/v2/acts/epctex~youtube-video-downloader/run-sync-get-dataset-items"
         params = {"token": self.settings.apify_api_token}
-        
+
         # Payload according to the actor's schema
-        payload = {
-            "startUrls": [url],
-            "quality": "360"
-        }
+        payload = {"startUrls": [url], "quality": "360"}
 
         logger.info(f"Calling Apify to run epctex/youtube-video-downloader for: {url}")
         # Note: run-sync endpoint waits for the actor to finish. Actor runs can take a minute or two.
         async with httpx.AsyncClient(timeout=300) as client:
             response = await client.post(api_url, params=params, json=payload)
-            
+
             if response.status_code != 200 and response.status_code != 201:
                 logger.error(f"Apify failed: {response.status_code} {response.text}")
-                raise DownloadError(f"Apify YouTube Downloader failed (HTTP {response.status_code}). Ensure your token is valid.")
-            
+                raise DownloadError(
+                    f"Apify YouTube Downloader failed (HTTP {response.status_code}). Ensure your token is valid."
+                )
+
             data = response.json()
-            
+
         if not data or not isinstance(data, list) or len(data) == 0:
             logger.error(f"Apify returned empty or invalid dataset: {data}")
             raise DownloadError("Apify returned success, but no dataset items were found.")
-            
+
         # Extract the storage URL from the first item
         item = data[0]
         storage_url = item.get("storageUrl")
-        
+
         if not storage_url:
             logger.error(f"Apify returned dataset without storageUrl: {item}")
-            raise DownloadError("Apify ran successfully, but could not extract a download URL for this video.")
+            raise DownloadError(
+                "Apify ran successfully, but could not extract a download URL for this video."
+            )
 
         logger.info(f"Apify finished. Downloading MP4 directly from storage: {storage_url[:80]}...")
 
         file_path = destination / "source.mp4"
-        
-        async with httpx.AsyncClient(timeout=300) as client, client.stream("GET", storage_url) as stream_resp:
-                if stream_resp.status_code != 200:
-                    raise DownloadError(f"Failed to download media from Apify storage (HTTP {stream_resp.status_code})")
-                async with await anyio.open_file(file_path, "wb") as f:
-                    async for chunk in stream_resp.aiter_bytes():
-                        await f.write(chunk)
+
+        async with (
+            httpx.AsyncClient(timeout=300) as client,
+            client.stream("GET", storage_url) as stream_resp,
+        ):
+            if stream_resp.status_code != 200:
+                raise DownloadError(
+                    f"Failed to download media from Apify storage (HTTP {stream_resp.status_code})"
+                )
+            async with await anyio.open_file(file_path, "wb") as f:
+                async for chunk in stream_resp.aiter_bytes():
+                    await f.write(chunk)
 
         logger.info(f"Downloaded {url} -> {file_path.name} ({file_path.stat().st_size} bytes)")
         return file_path
@@ -336,11 +369,15 @@ class RealMediaBackend:
             self.settings.ffmpeg_binary,
             "-nostdin",
             "-y",
-            "-i", str(video_path),
+            "-i",
+            str(video_path),
             "-vn",
-            "-ac", str(AUDIO_CHANNELS),
-            "-ar", str(AUDIO_SAMPLE_RATE),
-            "-acodec", "pcm_s16le",
+            "-ac",
+            str(AUDIO_CHANNELS),
+            "-ar",
+            str(AUDIO_SAMPLE_RATE),
+            "-acodec",
+            "pcm_s16le",
             str(audio_path),
             error="Audio extraction failed",
         )
@@ -362,10 +399,14 @@ class RealMediaBackend:
             self.settings.ffmpeg_binary,
             "-nostdin",
             "-y",
-            "-i", str(audio_path),
-            "-f", "segment",
-            "-segment_time", str(chunk_seconds),
-            "-c", "copy",
+            "-i",
+            str(audio_path),
+            "-f",
+            "segment",
+            "-segment_time",
+            str(chunk_seconds),
+            "-c",
+            "copy",
             pattern,
             error="Audio segmentation failed",
         )

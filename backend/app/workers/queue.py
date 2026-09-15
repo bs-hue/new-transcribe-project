@@ -126,8 +126,6 @@ async def retry_job(job_id: str) -> bool:
 async def queue_depth() -> int:
     async with session_scope() as session:
         rows = (
-            await session.execute(
-                select(Job.id).where(Job.status == JobStatus.QUEUED.value)
-            )
+            await session.execute(select(Job.id).where(Job.status == JobStatus.QUEUED.value))
         ).all()
         return len(rows)

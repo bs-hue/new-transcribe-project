@@ -76,7 +76,7 @@ async def test_dashboard_counts_completed_work_and_lists_it(
 async def test_transcribing_the_same_video_twice_still_counts_as_one(
     client, session, settings, fake_media, patched_metadata
 ) -> None:
-    """"Total research" is clickable and lands on History, which lists videos.
+    """ "Total research" is clickable and lands on History, which lists videos.
     A second transcript of the same video must not make the two disagree, nor
     show the video twice under "Recent research"."""
     for _ in range(2):
@@ -123,9 +123,7 @@ async def test_a_job_records_who_submitted_it(client, member_credentials) -> Non
     assert job["submitted_by_name"] == member_credentials[0]
 
 
-async def test_removing_a_user_keeps_their_jobs(
-    client, admin_client, member_credentials
-) -> None:
+async def test_removing_a_user_keeps_their_jobs(client, admin_client, member_credentials) -> None:
     """Deleting a colleague must not delete the research they collected."""
     submission = (await client.post("/api/videos", json={"urls": [URL]})).json()
     job_id = submission["results"][0]["job_id"]
@@ -135,8 +133,8 @@ async def test_removing_a_user_keeps_their_jobs(
     assert (await admin_client.delete(f"/api/auth/users/{member['id']}")).status_code == 204
 
     job = (await admin_client.get(f"/api/jobs/{job_id}")).json()
-    assert job["id"] == job_id           # the job survives
-    assert job["submitted_by"] is None   # the link is cleared, not cascaded
+    assert job["id"] == job_id  # the job survives
+    assert job["submitted_by"] is None  # the link is cleared, not cascaded
 
 
 # --- settings ----------------------------------------------------------------
@@ -168,21 +166,15 @@ async def test_an_admin_can_change_a_limit(admin_client) -> None:
     )
     assert response.status_code == 200
     assert response.json()["values"]["max_urls_per_request"] == 25
-    assert (await admin_client.get("/api/settings")).json()["values"][
-        "max_urls_per_request"
-    ] == 25
+    assert (await admin_client.get("/api/settings")).json()["values"]["max_urls_per_request"] == 25
 
 
 async def test_a_member_cannot_change_settings(client) -> None:
-    response = await client.patch(
-        "/api/settings", json={"values": {"max_urls_per_request": 25}}
-    )
+    response = await client.patch("/api/settings", json={"values": {"max_urls_per_request": 25}})
     assert response.status_code == 403
 
 
-async def test_a_changed_limit_takes_effect_without_a_restart(
-    admin_client, client
-) -> None:
+async def test_a_changed_limit_takes_effect_without_a_restart(admin_client, client) -> None:
     """The whole point of storing these: no redeploy to change a limit."""
     urls = [f"https://youtu.be/{'a' * 10}{i}" for i in range(12)]
 
@@ -220,9 +212,7 @@ async def test_settings_outside_the_allowlist_cannot_be_written(session) -> None
         assert "not a changeable setting" in exc.value.message.lower()
 
 
-async def test_overrides_do_not_mutate_the_shared_settings_object(
-    session, settings
-) -> None:
+async def test_overrides_do_not_mutate_the_shared_settings_object(session, settings) -> None:
     """A request that changes a limit must not affect a job already in flight."""
     before = settings.max_urls_per_request
     await update_settings(session, {"max_urls_per_request": 42})
@@ -241,7 +231,7 @@ async def test_an_admin_can_run_the_system_check_from_the_browser(admin_client) 
     names = {r["name"] for r in payload["results"]}
     assert "Database" in names
     assert "Where audio is processed" in names
-    assert payload["text"].startswith("\nContent Research Hub")
+    assert payload["text"].startswith("\nInstagram & YouTube Transcription Agent")
 
 
 async def test_a_member_cannot_run_the_system_check(client) -> None:
@@ -335,9 +325,7 @@ async def test_the_settings_screen_actually_reaches_the_transcriber(
                 text="ok", segments=[], language=language, provider=self.name
             )
 
-    monkeypatch.setattr(
-        "app.services.pipeline.get_transcription_provider", lambda s: Recorder(s)
-    )
+    monkeypatch.setattr("app.services.pipeline.get_transcription_provider", lambda s: Recorder(s))
 
     await update_settings(
         session,

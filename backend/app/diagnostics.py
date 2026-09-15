@@ -115,8 +115,7 @@ def check_jwt_secret(settings: Settings) -> CheckResult:
         name="Sign-in secret",
         ok=False,
         warning_only=development,
-        detail=f"JWT_SECRET is {problem}"
-        + (" (allowed in development)" if development else ""),
+        detail=f"JWT_SECRET is {problem}" + (" (allowed in development)" if development else ""),
         fix="Set JWT_SECRET in .env to a long random value. Generate one with: "
         'python -c "import secrets; print(secrets.token_urlsafe(48))"',
     )

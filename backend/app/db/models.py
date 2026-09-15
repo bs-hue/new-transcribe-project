@@ -97,14 +97,10 @@ class User(Base):
     #: waiting". Deliberately separate from ``is_active``: that is the ban
     #: switch, and an admin needs to tell a new applicant apart from someone
     #: they have suspended. Accounts an admin creates are approved on creation.
-    approved_at: Mapped[datetime | None] = mapped_column(
-        DateTime(timezone=True), default=None
-    )
+    approved_at: Mapped[datetime | None] = mapped_column(DateTime(timezone=True), default=None)
 
     created_at: Mapped[datetime] = mapped_column(DateTime(timezone=True), default=_utcnow)
-    last_login_at: Mapped[datetime | None] = mapped_column(
-        DateTime(timezone=True), default=None
-    )
+    last_login_at: Mapped[datetime | None] = mapped_column(DateTime(timezone=True), default=None)
 
     @property
     def is_admin(self) -> bool:

@@ -168,11 +168,14 @@ class Pipeline:
     async def _stage_audio(self, ctx: PipelineContext) -> None:
         await self._set_stage(ctx.job_id, JobStage.EXTRACTING_AUDIO)
         assert ctx.video_path is not None
-        ctx.audio_path = await self.media_for(ctx.settings or self.settings).extract_audio(ctx.video_path, ctx.work.path)
-        
+        ctx.audio_path = await self.media_for(ctx.settings or self.settings).extract_audio(
+            ctx.video_path, ctx.work.path
+        )
+
         # Calculate exact duration directly from the extracted audio stream
         try:
             import wave
+
             with wave.open(str(ctx.audio_path), "rb") as wf:
                 frames = wf.getnframes()
                 rate = wf.getframerate()
@@ -180,7 +183,9 @@ class Pipeline:
                     exact_duration = frames / float(rate)
                     async with session_scope() as session:
                         video = await session.get(Video, ctx.video_id)
-                        if video is not None and (video.duration_seconds is None or video.duration_seconds == 0):
+                        if video is not None and (
+                            video.duration_seconds is None or video.duration_seconds == 0
+                        ):
                             video.duration_seconds = round(exact_duration, 2)
         except Exception as e:
             logger.debug("Could not read exact WAV duration: %s", e)
@@ -211,14 +216,10 @@ class Pipeline:
 
         results: list[tuple[TranscriptionResult, float]] = []
         for position, (chunk_path, offset) in enumerate(chunks):
-            await self._set_stage(
-                ctx.job_id, JobStage.TRANSCRIBING, position / max(len(chunks), 1)
-            )
+            await self._set_stage(ctx.job_id, JobStage.TRANSCRIBING, position / max(len(chunks), 1))
             results.append((await provider.transcribe(chunk_path, language=language), offset))
 
-        ctx.result = merge_results(
-            results, provider=provider.name, model=provider.model_name
-        )
+        ctx.result = merge_results(results, provider=provider.name, model=provider.model_name)
 
     async def _stage_store(self, ctx: PipelineContext) -> None:
         await self._set_stage(ctx.job_id, JobStage.STORING)
@@ -322,9 +323,7 @@ class Pipeline:
             raise
         except Exception as exc:  # unexpected: log the trace, keep the message generic
             logger.exception("Job %s crashed", job_id)
-            await self._finish_failed(
-                job_id, AppError(f"Unexpected error: {exc}")
-            )
+            await self._finish_failed(job_id, AppError(f"Unexpected error: {exc}"))
             raise
         else:
             await self._finish_completed(job_id)

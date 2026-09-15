@@ -35,7 +35,6 @@ async def lifespan(app: FastAPI) -> AsyncIterator[None]:
     settings = get_settings()
     configure_logging(settings.log_level)
 
-
     # Refuse to start in production with the shipped JWT signing key â€” an
     # unchanged secret lets anyone mint a token for themselves.
     check_secret(settings)

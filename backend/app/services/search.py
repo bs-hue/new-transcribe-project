@@ -230,21 +230,23 @@ class SqliteFtsBackend(SearchBackend):
             WHERE transcript_fts MATCH :match{where}
         """
 
-        total = (
-            await session.execute(text(f"SELECT COUNT(*) {base}"), params)
-        ).scalar_one()
+        total = (await session.execute(text(f"SELECT COUNT(*) {base}"), params)).scalar_one()
 
         rows = (
-            await session.execute(
-                text(
-                    "SELECT f.transcript_id, f.video_id, "
-                    "snippet(transcript_fts, 4, '', '', '…', 24) AS snippet, "
-                    f"bm25(transcript_fts) AS rank {base} "
-                    "ORDER BY rank LIMIT :limit OFFSET :offset"
-                ),
-                params,
+            (
+                await session.execute(
+                    text(
+                        "SELECT f.transcript_id, f.video_id, "
+                        "snippet(transcript_fts, 4, '', '', '…', 24) AS snippet, "
+                        f"bm25(transcript_fts) AS rank {base} "
+                        "ORDER BY rank LIMIT :limit OFFSET :offset"
+                    ),
+                    params,
+                )
             )
-        ).mappings().all()
+            .mappings()
+            .all()
+        )
 
         return SearchResults(
             hits=[
@@ -306,14 +308,18 @@ class LikeSearchBackend(SearchBackend):
 
         total = (await session.execute(text(f"SELECT COUNT(*) {base}"), params)).scalar_one()
         rows = (
-            await session.execute(
-                text(
-                    f"SELECT t.id AS transcript_id, t.video_id, t.text {base} "
-                    "ORDER BY t.created_at DESC LIMIT :limit OFFSET :offset"
-                ),
-                params,
+            (
+                await session.execute(
+                    text(
+                        f"SELECT t.id AS transcript_id, t.video_id, t.text {base} "
+                        "ORDER BY t.created_at DESC LIMIT :limit OFFSET :offset"
+                    ),
+                    params,
+                )
             )
-        ).mappings().all()
+            .mappings()
+            .all()
+        )
 
         return SearchResults(
             hits=[

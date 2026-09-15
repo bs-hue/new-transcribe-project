@@ -101,8 +101,15 @@ class XlsxExporter(Exporter):
     combinable = True
 
     _SUMMARY_HEADERS = (
-        "Title", "Creator", "Platform", "Duration", "Language",
-        "Words", "Provider", "Source URL", "Transcript",
+        "Title",
+        "Creator",
+        "Platform",
+        "Duration",
+        "Language",
+        "Words",
+        "Provider",
+        "Source URL",
+        "Transcript",
     )
     _SEGMENT_HEADERS = ("Title", "#", "Start", "End", "Text")
 

@@ -63,16 +63,18 @@ def get_engine(settings: Settings | None = None) -> AsyncEngine:
             "future": True,
         }
         if not settings.is_sqlite:
-            engine_kwargs.update({
-                "pool_size": 5,
-                "max_overflow": 5,
-                "pool_recycle": 300,
-                "pool_timeout": 30,
-                "connect_args": {
-                    "statement_cache_size": 0,
-                    "prepared_statement_cache_size": 0,
-                },
-            })
+            engine_kwargs.update(
+                {
+                    "pool_size": 5,
+                    "max_overflow": 5,
+                    "pool_recycle": 300,
+                    "pool_timeout": 30,
+                    "connect_args": {
+                        "statement_cache_size": 0,
+                        "prepared_statement_cache_size": 0,
+                    },
+                }
+            )
         _engine = create_async_engine(
             settings.database_url,
             **engine_kwargs,

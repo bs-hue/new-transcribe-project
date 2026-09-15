@@ -135,9 +135,7 @@ DEFINITIONS: tuple[Definition, ...] = (
             "base": "Base — fast, fine for clear English, weak on Hindi",
             "small": "Small — workable Hindi, quick",
             "medium": "Medium — good Hindi, about 2× slower than small",
-            "large-v3-turbo": (
-                "Turbo — near-Large quality at roughly Medium speed (recommended)"
-            ),
+            "large-v3-turbo": ("Turbo — near-Large quality at roughly Medium speed (recommended)"),
             "large-v3": "Large — best available, and about 5× slower than Turbo",
         },
         applies_to="jobs started from now on",
@@ -203,9 +201,7 @@ def _validate(definition: Definition, value: Any) -> str:
         return normalise_language(text) or ""
 
     if definition.choices and text not in definition.choices:
-        raise AppError(
-            f"{definition.label} must be one of: {', '.join(definition.choices)}."
-        )
+        raise AppError(f"{definition.label} must be one of: {', '.join(definition.choices)}.")
     return text
 
 
@@ -224,9 +220,7 @@ async def load_overrides(session: AsyncSession) -> dict[str, Any]:
     return overrides
 
 
-async def effective_settings(
-    session: AsyncSession, base: Settings | None = None
-) -> Settings:
+async def effective_settings(session: AsyncSession, base: Settings | None = None) -> Settings:
     """Environment defaults with any stored overrides applied.
 
     Returns a copy — the cached global settings object is never mutated, so a

@@ -12,7 +12,9 @@ from app.config import Settings, get_settings
 logger = logging.getLogger(__name__)
 
 
-def _build_reset_email_body(to_email: str, reset_link: str, expire_minutes: int, app_name: str) -> tuple[str, str]:
+def _build_reset_email_body(
+    to_email: str, reset_link: str, expire_minutes: int, app_name: str
+) -> tuple[str, str]:
     """Return (plain_text, html) email body."""
     plain = f"""Hello,
 
@@ -131,7 +133,11 @@ def _send_smtp_sync(
 ) -> None:
     msg = EmailMessage()
     msg["Subject"] = subject
-    from_header = f"{settings.smtp_from_name} <{settings.smtp_from_email}>" if settings.smtp_from_name else settings.smtp_from_email
+    from_header = (
+        f"{settings.smtp_from_name} <{settings.smtp_from_email}>"
+        if settings.smtp_from_name
+        else settings.smtp_from_email
+    )
     msg["From"] = from_header
     msg["To"] = to_email
 
@@ -173,8 +179,7 @@ async def send_password_reset_email(
             "PASSWORD RESET LINK GENERATED (SMTP not configured, logging link):\n"
             "To: %s\n"
             "Reset Link: %s\n"
-            "Valid for: %d minutes\n"
-            + "=" * 80 + "\n",
+            "Valid for: %d minutes\n" + "=" * 80 + "\n",
             to_email,
             reset_link,
             settings.password_reset_token_expire_minutes,

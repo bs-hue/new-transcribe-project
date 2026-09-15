@@ -174,9 +174,7 @@ class FasterWhisperProvider(TranscriptionProvider):
             # Only consulted when `language` is None. Listening to more of the
             # video before deciding is the difference between "this is Hindi"
             # and "the first thing I heard was a music sting, so, Indonesian".
-            language_detection_segments=(
-                self.settings.faster_whisper_language_detection_segments
-            ),
+            language_detection_segments=(self.settings.faster_whisper_language_detection_segments),
             **extra,
         )
 
@@ -209,8 +207,7 @@ class FasterWhisperProvider(TranscriptionProvider):
             )
         if audio_seconds and elapsed > 0:
             logger.info(
-                "Transcribed %.0fs of audio in %.0fs "
-                "(%.1fx real time, model=%s, %s, batch=%d)",
+                "Transcribed %.0fs of audio in %.0fs (%.1fx real time, model=%s, %s, batch=%d)",
                 audio_seconds,
                 elapsed,
                 audio_seconds / elapsed,

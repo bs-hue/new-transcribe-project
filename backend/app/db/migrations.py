@@ -60,9 +60,7 @@ async def _table_names(database_url: str) -> set[str]:
     engine = create_async_engine(database_url, poolclass=NullPool)
     try:
         async with engine.connect() as connection:
-            return set(
-                await connection.run_sync(lambda sync: inspect(sync).get_table_names())
-            )
+            return set(await connection.run_sync(lambda sync: inspect(sync).get_table_names()))
     finally:
         await engine.dispose()
 

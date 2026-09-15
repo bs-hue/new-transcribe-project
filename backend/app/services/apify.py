@@ -9,14 +9,20 @@ from app.services.transcription import TranscriptionResult, TranscriptSegmentDat
 
 logger = logging.getLogger(__name__)
 
+
 class ApifyError(AppError):
     """An error interacting with Apify."""
+
     pass
 
 
-async def fetch_youtube_transcript_apify(url: str, token: str, language: str | None = None) -> TranscriptionResult:
+async def fetch_youtube_transcript_apify(
+    url: str, token: str, language: str | None = None
+) -> TranscriptionResult:
     """Fetch a transcript directly from YouTube using the starvibe Apify actor."""
-    api_url = "https://api.apify.com/v2/acts/starvibe~youtube-video-transcript/run-sync-get-dataset-items"
+    api_url = (
+        "https://api.apify.com/v2/acts/starvibe~youtube-video-transcript/run-sync-get-dataset-items"
+    )
     params = {"token": token}
     payload = {
         "youtube_url": url,
@@ -25,13 +31,15 @@ async def fetch_youtube_transcript_apify(url: str, token: str, language: str | N
         payload["language"] = language
 
     logger.info("Calling Apify (starvibe/youtube-video-transcript) for %s", url)
-    
+
     async with httpx.AsyncClient(timeout=300) as client:
         try:
             response = await client.post(api_url, params=params, json=payload)
             if response.status_code not in (200, 201):
                 logger.error("Apify actor failed: %d %s", response.status_code, response.text)
-                raise ApifyError(f"Apify transcript extraction failed (HTTP {response.status_code}). Check your token or video URL.")
+                raise ApifyError(
+                    f"Apify transcript extraction failed (HTTP {response.status_code}). Check your token or video URL."
+                )
             data = response.json()
         except httpx.RequestError as exc:
             raise ApifyError(f"Connection to Apify failed: {exc}") from exc
@@ -40,7 +48,7 @@ async def fetch_youtube_transcript_apify(url: str, token: str, language: str | N
         raise ApifyError("Apify returned success but no data was found.")
 
     item = data[0]
-    
+
     if item.get("status") == "error":
         msg = item.get("message", "Unknown error fetching transcript from YouTube.")
         raise TranscriptionError(f"Could not extract transcript: {msg}")
@@ -56,7 +64,7 @@ async def fetch_youtube_transcript_apify(url: str, token: str, language: str | N
         text = seg.get("text", "").strip()
         if not text:
             continue
-            
+
         full_text_parts.append(text)
         segments.append(
             TranscriptSegmentData(
@@ -82,12 +90,10 @@ async def get_youtube_audio_url_thenetaji(url: str, token: str) -> str:
     """Fetch a direct audio download URL using thenetaji/youtube-video-downloader-advanced."""
     api_url = "https://api.apify.com/v2/acts/thenetaji~youtube-video-downloader-advanced/run-sync-get-dataset-items"
     params = {"token": token}
-    payload = {
-        "urls": [{"url": url}]
-    }
+    payload = {"urls": [{"url": url}]}
 
     logger.info("Calling Apify (thenetaji/youtube-video-downloader-advanced) for %s", url)
-    
+
     async with httpx.AsyncClient(timeout=300) as client:
         try:
             response = await client.post(api_url, params=params, json=payload)
@@ -103,10 +109,10 @@ async def get_youtube_audio_url_thenetaji(url: str, token: str) -> str:
     item = data[0]
     if item.get("status") != "ok":
         raise ApifyError("Actor did not return ok status.")
-        
+
     video_info = item.get("videoInfo", {})
     adaptive_formats = video_info.get("adaptiveFormats", [])
-    
+
     # Prioritize audio-only streams
     for fmt in adaptive_formats:
         mime = fmt.get("mimeType", "")
@@ -114,7 +120,7 @@ async def get_youtube_audio_url_thenetaji(url: str, token: str) -> str:
             stream_url = fmt.get("url")
             if stream_url:
                 return stream_url
-                
+
     raise ApifyError("No audio streams found in the thenetaji response.")
 
 
@@ -127,11 +133,11 @@ async def get_youtube_audio_url_crawlerbros(url: str, token: str) -> str:
         "videoQuality": "audio_only",
         "downloadSubtitles": False,
         "extractMetadataOnly": False,
-        "proxyCountry": "IN"
+        "proxyCountry": "IN",
     }
 
     logger.info("Calling Apify (crawlerbros/youtube-video-downloader) for %s", url)
-    
+
     async with httpx.AsyncClient(timeout=300) as client:
         try:
             response = await client.post(api_url, params=params, json=payload)
@@ -151,4 +157,3 @@ async def get_youtube_audio_url_crawlerbros(url: str, token: str) -> str:
         return audio_url
 
     raise ApifyError("No audio URL found in the crawlerbros response.")
-

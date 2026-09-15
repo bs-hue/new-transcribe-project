@@ -32,9 +32,7 @@ async def dashboard(session: DbSession, _user: CurrentUser) -> DashboardResponse
     active_states = [JobStatus.QUEUED.value, JobStatus.RUNNING.value]
 
     in_progress = (
-        await session.execute(
-            select(func.count(Job.id)).where(Job.status.in_(active_states))
-        )
+        await session.execute(select(func.count(Job.id)).where(Job.status.in_(active_states)))
     ).scalar_one()
 
     # "Today" is deliberately UTC rather than the viewer's timezone: the server

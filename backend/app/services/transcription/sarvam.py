@@ -93,9 +93,7 @@ class SarvamProvider(TranscriptionProvider):
         if code is None:
             # Better to let Saarika detect than to fail: an unsupported choice
             # is usually a language it can still hear, just not one we mapped.
-            logger.warning(
-                "Sarvam does not take %r as a language; detecting instead", language
-            )
+            logger.warning("Sarvam does not take %r as a language; detecting instead", language)
             return AUTO
         return code
 
@@ -154,9 +152,7 @@ class SarvamProvider(TranscriptionProvider):
             ) from exc
 
         if response.status_code == 401 or response.status_code == 403:
-            raise ConfigurationError(
-                "Sarvam rejected the API key. Check SARVAM_API_KEY in .env."
-            )
+            raise ConfigurationError("Sarvam rejected the API key. Check SARVAM_API_KEY in .env.")
         if response.status_code == 429:
             raise TranscriptionError(
                 "Sarvam's rate limit was reached. This job will be retried; if it "
@@ -165,8 +161,7 @@ class SarvamProvider(TranscriptionProvider):
             )
         if response.status_code >= 400:
             raise TranscriptionError(
-                f"Sarvam refused the audio ({response.status_code}): "
-                f"{response.text[:200]}"
+                f"Sarvam refused the audio ({response.status_code}): {response.text[:200]}"
             )
 
         try:

@@ -129,9 +129,7 @@ async def authenticate(session: AsyncSession, email: str, password: str) -> User
     # state the person can do nothing about but should understand; "deactivated"
     # means somebody decided. Conflating them makes both confusing.
     if user.approved_at is None:
-        raise AuthError(
-            "This account is waiting for an administrator to approve it."
-        )
+        raise AuthError("This account is waiting for an administrator to approve it.")
 
     user.last_login_at = datetime.now(UTC)
     await session.commit()

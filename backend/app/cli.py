@@ -56,11 +56,7 @@ async def _list_users(_args: argparse.Namespace) -> None:
     from app.db.models import User
 
     async with session_scope() as session:
-        users = (
-            (await session.execute(select(User).order_by(User.created_at)))
-            .scalars()
-            .all()
-        )
+        users = (await session.execute(select(User).order_by(User.created_at))).scalars().all()
 
     if not users:
         print("No users yet. Create one with: python -m app.cli create-user --email …")
@@ -69,10 +65,7 @@ async def _list_users(_args: argparse.Namespace) -> None:
     print(f"{'EMAIL':<38} {'ROLE':<8} {'ACTIVE':<7} CREATED")
     for user in users:
         active = "yes" if user.is_active else "no"
-        print(
-            f"{user.email:<38} {user.role:<8} {active:<7} "
-            f"{user.created_at:%Y-%m-%d}"
-        )
+        print(f"{user.email:<38} {user.role:<8} {active:<7} {user.created_at:%Y-%m-%d}")
 
 
 async def _reset_password(args: argparse.Namespace) -> None:
@@ -99,9 +92,7 @@ def build_parser() -> argparse.ArgumentParser:
     parser = argparse.ArgumentParser(prog="app.cli", description=__doc__)
     subparsers = parser.add_subparsers(dest="command", required=True)
 
-    doctor = subparsers.add_parser(
-        "doctor", help="Check this machine can run the hub"
-    )
+    doctor = subparsers.add_parser("doctor", help="Check this machine can run the hub")
     doctor.add_argument(
         "--deep",
         action="store_true",

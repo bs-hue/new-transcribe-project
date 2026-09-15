@@ -58,8 +58,7 @@ def get_exporter(format_name: str) -> Exporter:
     exporter = _EXPORTERS.get((format_name or "").strip().lower())
     if exporter is None:
         raise ExportFormatError(
-            f"Unsupported export format {format_name!r}. "
-            f"Supported: {', '.join(format_names())}."
+            f"Unsupported export format {format_name!r}. Supported: {', '.join(format_names())}."
         )
     return exporter
 
@@ -69,8 +68,7 @@ def export_one(document: ExportDocument, format_name: str) -> tuple[bytes, str, 
     exporter = get_exporter(format_name)
     if exporter.requires_segments and not document.segments:
         raise ExportFormatError(
-            f"{exporter.display_name} export needs timed segments, and this "
-            "transcript has none."
+            f"{exporter.display_name} export needs timed segments, and this transcript has none."
         )
     return exporter.render(document), exporter.filename(document), exporter.content_type
 
@@ -97,9 +95,7 @@ def export_many(
     if combined is not None:
         return combined, f"transcripts-{stamp}.{exporter.extension}", exporter.content_type
 
-    usable = [
-        doc for doc in documents if doc.segments or not exporter.requires_segments
-    ]
+    usable = [doc for doc in documents if doc.segments or not exporter.requires_segments]
     if not usable:
         raise ExportFormatError(
             f"None of the selected transcripts have the timed segments "
@@ -114,9 +110,7 @@ def export_many(
             count = seen.get(stem, 0)
             seen[stem] = count + 1
             suffix = f"-{count}" if count else ""
-            archive.writestr(
-                f"{stem}{suffix}.{exporter.extension}", exporter.render(document)
-            )
+            archive.writestr(f"{stem}{suffix}.{exporter.extension}", exporter.render(document))
 
     return buffer.getvalue(), f"transcripts-{stamp}-{exporter.format}.zip", "application/zip"
 

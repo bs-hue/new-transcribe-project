@@ -29,34 +29,37 @@ from app.services.settings_store import effective_settings
 
 router = APIRouter(prefix="/videos", tags=["videos"])
 
+
 @router.get("/debug-proxy")
 async def debug_proxy(settings: AppSettings):
     import traceback
 
     import httpx
-    
+
     debug_log = []
-    
+
     # Step 1: Check token
     if not settings.webshare_token:
         debug_log.append("ERROR: WEBSHARE_TOKEN is empty in environment.")
         return {"status": "failed_at_token", "log": debug_log}
-    
+
     debug_log.append(f"WEBSHARE_TOKEN is set: {settings.webshare_token[:5]}***")
-    
+
     # Step 2: Fetch proxies
     try:
         debug_log.append("Fetching proxies from Webshare API...")
         headers = {"Authorization": f"Token {settings.webshare_token}"}
         async with httpx.AsyncClient(timeout=10) as client:
-            r = await client.get("https://proxy.webshare.io/api/v2/proxy/list/?mode=direct", headers=headers)
+            r = await client.get(
+                "https://proxy.webshare.io/api/v2/proxy/list/?mode=direct", headers=headers
+            )
             r.raise_for_status()
             data = r.json()
             results = data.get("results", [])
             debug_log.append(f"SUCCESS: Fetched {len(results)} proxies.")
             if not results:
                 return {"status": "no_proxies", "log": debug_log}
-            
+
             p = results[0]
             proxy_url = f"http://{p['username']}:{p['password']}@{p['proxy_address']}:{p['port']}"
             debug_log.append(f"Selected proxy: {p['proxy_address']}:{p['port']}")
@@ -64,7 +67,7 @@ async def debug_proxy(settings: AppSettings):
         debug_log.append(f"ERROR fetching proxies: {e}")
         debug_log.append(traceback.format_exc())
         return {"status": "failed_at_webshare_api", "log": debug_log}
-        
+
     # Step 3: Test proxy against YouTube
     try:
         debug_log.append("Testing proxy connection to YouTube...")
@@ -86,8 +89,7 @@ _PREVIEW_CONCURRENCY = 4
 def _enforce_batch_size(urls: list[str], settings: AppSettings) -> None:
     if len(urls) > settings.max_urls_per_request:
         raise AppError(
-            f"Too many URLs: {len(urls)} submitted, limit is "
-            f"{settings.max_urls_per_request}.",
+            f"Too many URLs: {len(urls)} submitted, limit is {settings.max_urls_per_request}.",
             details={"limit": settings.max_urls_per_request},
         )
 
@@ -187,9 +189,7 @@ async def list_videos(
 
 @router.get("/{video_id}", response_model=VideoDetail)
 async def get_video(video_id: str, session: DbSession) -> VideoDetail:
-    video = (
-        await session.execute(select(Video).where(Video.id == video_id))
-    ).scalar_one_or_none()
+    video = (await session.execute(select(Video).where(Video.id == video_id))).scalar_one_or_none()
     if video is None:
         raise NotFoundError(f"No video with id {video_id}.")
 
@@ -235,9 +235,7 @@ async def delete_video(video_id: str, session: DbSession) -> None:
 
     backend = get_search_backend()
     transcript_ids = (
-        (
-            await session.execute(select(Transcript.id).where(Transcript.video_id == video_id))
-        )
+        (await session.execute(select(Transcript.id).where(Transcript.video_id == video_id)))
         .scalars()
         .all()
     )

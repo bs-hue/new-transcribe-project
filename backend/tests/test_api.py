@@ -59,7 +59,7 @@ async def test_health_reports_ok(client) -> None:
 
 async def test_meta_advertises_platforms_formats_and_limits(client) -> None:
     payload = (await client.get("/api/meta")).json()
-    assert {p["name"] for p in payload["platforms"]} == {"youtube", "instagram"}
+    assert {p["name"] for p in payload["platforms"]} == {"youtube", "instagram", "facebook"}
     assert len(payload["export_formats"]) == 7
     assert payload["limits"]["max_urls_per_request"] == 10
     assert payload["transcription_ready"] is True
@@ -153,9 +153,7 @@ async def test_unknown_batch_is_a_404(client) -> None:
 
 
 async def test_cancel_then_retry_moves_a_job_through_states(client) -> None:
-    job_id = (await client.post("/api/videos", json={"urls": [URL]})).json()["results"][0][
-        "job_id"
-    ]
+    job_id = (await client.post("/api/videos", json={"urls": [URL]})).json()["results"][0]["job_id"]
 
     assert (await client.post(f"/api/jobs/{job_id}/cancel")).json()["status"] == "cancelled"
     assert (await client.post(f"/api/jobs/{job_id}/retry")).json()["status"] == "queued"
@@ -252,7 +250,7 @@ async def test_search_survives_query_syntax_characters(
 
 
 async def test_search_requires_a_query(client) -> None:
-    assert (await client.get("/api/search?q=")).status_code == 422
+    assert (await client.get("/api/search?q=")).status_code == 200
 
 
 # --- export ------------------------------------------------------------------

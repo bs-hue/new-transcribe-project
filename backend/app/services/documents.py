@@ -34,8 +34,7 @@ def to_document(transcript: Transcript) -> ExportDocument:
             )
             for segment in transcript.segments
         ],
-        duration_seconds=transcript.duration_seconds
-        or (video.duration_seconds if video else None),
+        duration_seconds=transcript.duration_seconds or (video.duration_seconds if video else None),
         language=transcript.language,
         provider=transcript.provider,
         model=transcript.model,

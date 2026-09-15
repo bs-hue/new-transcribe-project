@@ -159,8 +159,6 @@ class Settings(BaseSettings):
             return [item.strip() for item in value.split(",") if item.strip()]
         return value
 
-
-
     @field_validator(
         "transcription_language",
         "bootstrap_admin_email",

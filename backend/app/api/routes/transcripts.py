@@ -43,9 +43,9 @@ async def list_transcripts(
         statement = statement.join(Video, Video.id == Transcript.video_id).where(
             Video.platform == platform
         )
-        count_statement = count_statement.join(
-            Video, Video.id == Transcript.video_id
-        ).where(Video.platform == platform)
+        count_statement = count_statement.join(Video, Video.id == Transcript.video_id).where(
+            Video.platform == platform
+        )
 
     total = (await session.execute(count_statement)).scalar_one()
     rows = (
@@ -83,9 +83,7 @@ async def _load(session, transcript_id: str) -> Transcript:  # noqa: ANN001
 async def get_transcript(transcript_id: str, session: DbSession) -> TranscriptDetail:
     transcript = await _load(session, transcript_id)
     detail = TranscriptDetail.model_validate(transcript)
-    detail.video = (
-        VideoSummary.model_validate(transcript.video) if transcript.video else None
-    )
+    detail.video = VideoSummary.model_validate(transcript.video) if transcript.video else None
     return detail
 
 

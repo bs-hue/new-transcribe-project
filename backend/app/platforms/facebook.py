@@ -23,9 +23,14 @@ class FacebookAdapter(PlatformAdapter):
 
     patterns = (
         # Ads Library ID in query parameter: ?id=123456 or &id=123456
-        re.compile(r"facebook\.com/ads/(?:library|archive/render_ad)/?.*?[?&]id=(?P<id>\d+)", re.IGNORECASE),
+        re.compile(
+            r"facebook\.com/ads/(?:library|archive/render_ad)/?.*?[?&]id=(?P<id>\d+)", re.IGNORECASE
+        ),
         # Watch / Reels / Videos / Shares
-        re.compile(r"facebook\.com/(?:watch/?\?v=|reel/|share/v/|(?:[^/]+/videos/))(?P<id>[0-9A-Za-z_-]+)", re.IGNORECASE),
+        re.compile(
+            r"facebook\.com/(?:watch/?\?v=|reel/|share/v/|(?:[^/]+/videos/))(?P<id>[0-9A-Za-z_-]+)",
+            re.IGNORECASE,
+        ),
         re.compile(r"fb\.watch/(?P<id>[0-9A-Za-z_-]+)", re.IGNORECASE),
     )
 

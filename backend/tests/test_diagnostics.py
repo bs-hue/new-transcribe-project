@@ -54,9 +54,7 @@ def test_default_secret_is_a_warning_in_development_and_a_failure_otherwise() ->
 
 
 def test_a_long_secret_passes() -> None:
-    result = check_jwt_secret(
-        Settings(environment="production", jwt_secret="x" * 48)
-    )
+    result = check_jwt_secret(Settings(environment="production", jwt_secret="x" * 48))
     assert result.ok
 
 
@@ -74,7 +72,7 @@ def test_using_a_hosted_service_is_allowed_but_declared() -> None:
     audio leaving the building, which the person reading this is entitled to
     know without reading the configuration file."""
     result = check_no_paid_api(Settings(transcription_provider="sarvam"))
-    assert result.ok            # not an error
+    assert result.ok  # not an error
     assert result.warning_only  # but not silent either
     assert "uploaded" in result.detail
     assert "faster_whisper" in (result.fix or "")
@@ -94,7 +92,7 @@ async def test_full_report_runs_and_renders(settings, database) -> None:
     assert {"Python version", "Database", "Speech-to-text", "Where audio is processed"} <= names
 
     output = render(report)
-    assert "Content Research Hub — system check" in output
+    assert "Instagram & YouTube Transcription Agent — system check" in output
     # Every check must appear in the rendered output, or the report lies.
     for result in report.results:
         assert result.name in output

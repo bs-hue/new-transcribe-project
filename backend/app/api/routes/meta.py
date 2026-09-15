@@ -30,29 +30,31 @@ async def debug_proxy(settings: AppSettings):
     import traceback
 
     import httpx
-    
+
     debug_log = []
-    
+
     # Step 1: Check token
     if not settings.webshare_token:
         debug_log.append("ERROR: WEBSHARE_TOKEN is empty in environment.")
         return {"status": "failed_at_token", "log": debug_log}
-    
+
     debug_log.append(f"WEBSHARE_TOKEN is set: {settings.webshare_token[:5]}***")
-    
+
     # Step 2: Fetch proxies
     try:
         debug_log.append("Fetching proxies from Webshare API...")
         headers = {"Authorization": f"Token {settings.webshare_token}"}
         async with httpx.AsyncClient(timeout=10) as client:
-            r = await client.get("https://proxy.webshare.io/api/v2/proxy/list/?mode=direct", headers=headers)
+            r = await client.get(
+                "https://proxy.webshare.io/api/v2/proxy/list/?mode=direct", headers=headers
+            )
             r.raise_for_status()
             data = r.json()
             results = data.get("results", [])
             debug_log.append(f"SUCCESS: Fetched {len(results)} proxies.")
             if not results:
                 return {"status": "no_proxies", "log": debug_log}
-            
+
             p = results[0]
             proxy_url = f"http://{p['username']}:{p['password']}@{p['proxy_address']}:{p['port']}"
             debug_log.append(f"Selected proxy: {p['proxy_address']}:{p['port']}")
@@ -60,7 +62,7 @@ async def debug_proxy(settings: AppSettings):
         debug_log.append(f"ERROR fetching proxies: {e}")
         debug_log.append(traceback.format_exc())
         return {"status": "failed_at_webshare_api", "log": debug_log}
-        
+
     # Step 3: Test proxy against YouTube
     try:
         debug_log.append("Testing proxy connection to YouTube...")

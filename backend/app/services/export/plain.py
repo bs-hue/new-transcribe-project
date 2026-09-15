@@ -45,16 +45,10 @@ class TxtExporter(Exporter):
             "",
             "CONTENTS",
         ]
-        parts += [
-            f"{number:>3}. {doc.safe_title}"
-            for number, doc in enumerate(documents, start=1)
-        ]
+        parts += [f"{number:>3}. {doc.safe_title}" for number, doc in enumerate(documents, start=1)]
 
         for number, document in enumerate(documents, start=1):
-            body = (
-                "\n".join(textwrap.wrap(document.text, width=100))
-                or "(no speech detected)"
-            )
+            body = "\n".join(textwrap.wrap(document.text, width=100)) or "(no speech detected)"
             parts += [
                 "",
                 "#" * 60,
@@ -134,10 +128,7 @@ class MarkdownExporter(Exporter):
             "",
             "## Contents",
             "",
-            *[
-                f"{number}. {doc.safe_title}"
-                for number, doc in enumerate(documents, start=1)
-            ],
+            *[f"{number}. {doc.safe_title}" for number, doc in enumerate(documents, start=1)],
             "",
             "---",
             "",

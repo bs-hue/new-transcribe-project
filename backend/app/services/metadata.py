@@ -79,6 +79,7 @@ def _ydl_options(settings: Settings) -> dict[str, Any]:
     }
 
     from app.services.proxy import get_random_proxy
+
     proxy = get_random_proxy()
     if proxy:
         options["proxy"] = proxy
@@ -177,12 +178,36 @@ def _slim_raw(info: dict[str, Any]) -> dict[str, Any]:
     will plausibly mine (hashtags, engagement, categories).
     """
     keys = (
-        "id", "title", "description", "duration", "view_count", "like_count",
-        "comment_count", "repost_count", "channel", "channel_id", "channel_url",
-        "channel_follower_count", "uploader", "uploader_id", "uploader_url",
-        "upload_date", "timestamp", "categories", "tags", "webpage_url",
-        "extractor_key", "language", "age_limit", "availability", "live_status",
-        "width", "height", "fps", "resolution", "aspect_ratio",
+        "id",
+        "title",
+        "description",
+        "duration",
+        "view_count",
+        "like_count",
+        "comment_count",
+        "repost_count",
+        "channel",
+        "channel_id",
+        "channel_url",
+        "channel_follower_count",
+        "uploader",
+        "uploader_id",
+        "uploader_url",
+        "upload_date",
+        "timestamp",
+        "categories",
+        "tags",
+        "webpage_url",
+        "extractor_key",
+        "language",
+        "age_limit",
+        "availability",
+        "live_status",
+        "width",
+        "height",
+        "fps",
+        "resolution",
+        "aspect_ratio",
     )
     return {key: info[key] for key in keys if key in info and info[key] is not None}
 
@@ -195,11 +220,11 @@ def _extract_sync(url: str, settings: Settings) -> dict[str, Any]:
 
     import os
     import tempfile
-    
+
     cookie_path = None
     info = None
     last_exc = None
-    
+
     try:
         options = _ydl_options(settings)
         if "facebook.com" in url.lower() or "fb.watch" in url.lower():
@@ -224,16 +249,18 @@ def _extract_sync(url: str, settings: Settings) -> dict[str, Any]:
                 last_exc = exc
                 lowered = str(exc).lower()
                 if any(phrase in lowered for phrase in _LOGIN_REQUIRED) and attempt < 4:
-                    logger.info(f"Proxy IP blocked by YouTube bot-check. Automatically rotating IP (attempt {attempt + 1}/5)...")
+                    logger.info(
+                        f"Proxy IP blocked by YouTube bot-check. Automatically rotating IP (attempt {attempt + 1}/5)..."
+                    )
                     # If we need to rotate, we must regenerate options to get a new proxy!
                     options = _ydl_options(settings)
                     if cookie_path:
                         options["cookiefile"] = cookie_path
                     continue  # Retry with a new rotating proxy IP
-                
+
                 # If it's a permanent error or we ran out of retries, throw it.
                 if attempt == 4:
-                    pass # Handled below
+                    pass  # Handled below
                 else:
                     _classify_and_raise(url, str(exc))
 
@@ -241,7 +268,9 @@ def _extract_sync(url: str, settings: Settings) -> dict[str, Any]:
             if last_exc:
                 message = str(last_exc).lower()
                 if any(phrase in message for phrase in _LOGIN_REQUIRED):
-                    logger.warning("All proxy attempts blocked by YouTube. Falling back to direct connection (NO PROXY)...")
+                    logger.warning(
+                        "All proxy attempts blocked by YouTube. Falling back to direct connection (NO PROXY)..."
+                    )
                     try:
                         fallback_opts = _ydl_options(settings)
                         if "proxy" in fallback_opts:
@@ -254,9 +283,11 @@ def _extract_sync(url: str, settings: Settings) -> dict[str, Any]:
                         _classify_and_raise(url, str(fallback_exc))
                 else:
                     _classify_and_raise(url, str(last_exc))
-            
+
             if info is None:
-                raise MetadataError("The platform returned no metadata for this URL.", details={"url": url})
+                raise MetadataError(
+                    "The platform returned no metadata for this URL.", details={"url": url}
+                )
 
         # A playlist slipped through despite noplaylist — take the first entry.
         if info.get("_type") == "playlist":
@@ -280,25 +311,24 @@ async def fetch_metadata(parsed: ParsedURL, settings: Settings | None = None) ->
     indefinitely if the proxy or platform tarpits the connection.
     """
     import asyncio
+
     settings = settings or get_settings()
-    
-    # Fast path: If Apify is configured for YouTube, we bypass yt-dlp entirely 
-    # to avoid proxy blocks during the Check phase. We use YouTube's public 
+
+    # Fast path: If Apify is configured for YouTube, we bypass yt-dlp entirely
+    # to avoid proxy blocks during the Check phase. We use YouTube's public
     # oEmbed API for instant, unblockable metadata (Title, Thumbnail, Author).
     if parsed.platform == "youtube" and settings.apify_api_token:
         return await _fetch_youtube_oembed_metadata(parsed)
-    
+
     try:
         info = await asyncio.wait_for(
-            anyio.to_thread.run_sync(_extract_sync, parsed.canonical_url, settings),
-            timeout=45.0
+            anyio.to_thread.run_sync(_extract_sync, parsed.canonical_url, settings), timeout=45.0
         )
     except TimeoutError:
         raise MetadataError(
             "Connection timed out while checking the video. The platform or proxy is unresponsive. Please try again.",
-            details={"url": parsed.canonical_url}
+            details={"url": parsed.canonical_url},
         )
-
 
     return VideoMetadata(
         platform=parsed.platform,
@@ -318,13 +348,14 @@ async def fetch_metadata(parsed: ParsedURL, settings: Settings | None = None) ->
         raw=_slim_raw(info),
     )
 
+
 async def _fetch_youtube_oembed_metadata(parsed: ParsedURL) -> VideoMetadata:
     import httpx
-    
+
     # YouTube's official public oEmbed API. No proxy or auth needed!
     api_url = "https://www.youtube.com/oembed"
     params = {"url": parsed.canonical_url, "format": "json"}
-    
+
     async with httpx.AsyncClient(timeout=10.0) as client:
         try:
             response = await client.get(api_url, params=params)
@@ -346,7 +377,7 @@ async def _fetch_youtube_oembed_metadata(parsed: ParsedURL) -> VideoMetadata:
         author=data.get("author_name") or "YouTube User",
         author_url=data.get("author_url"),
         thumbnail_url=data.get("thumbnail_url"),
-        duration_seconds=None, # oEmbed does not provide duration
+        duration_seconds=None,  # oEmbed does not provide duration
         estimated_size_bytes=None,
         view_count=None,
         like_count=None,

@@ -27,9 +27,7 @@ def audio(tmp_path: Path) -> Path:
 
 
 def _settings(**overrides) -> Settings:
-    return Settings(
-        transcription_provider="sarvam", sarvam_api_key="test-key", **overrides
-    )
+    return Settings(transcription_provider="sarvam", sarvam_api_key="test-key", **overrides)
 
 
 def _mock(monkeypatch, handler) -> dict:
@@ -85,9 +83,7 @@ async def test_no_language_asks_sarvam_to_detect(monkeypatch, audio) -> None:
     assert captured["data"]["language_code"] == "unknown"
 
 
-async def test_a_language_sarvam_cannot_do_falls_back_to_detection(
-    monkeypatch, audio
-) -> None:
+async def test_a_language_sarvam_cannot_do_falls_back_to_detection(monkeypatch, audio) -> None:
     """Saarika has no Urdu. Detecting is a worse answer than Urdu and a much
     better one than failing the job."""
     captured = _mock(monkeypatch, lambda: _response({"transcript": "ok"}))
@@ -124,9 +120,7 @@ async def test_word_timings_become_segments(monkeypatch, audio) -> None:
     assert result.segments[1].start == 0.5
 
 
-async def test_a_transcript_without_timings_is_still_a_transcript(
-    monkeypatch, audio
-) -> None:
+async def test_a_transcript_without_timings_is_still_a_transcript(monkeypatch, audio) -> None:
     """SRT and VTT need timings, but text, Word and Excel do not. Losing the
     whole transcript because the timings are missing would be the wrong trade."""
     _mock(monkeypatch, lambda: _response({"transcript": "hello", "language_code": "en-IN"}))
