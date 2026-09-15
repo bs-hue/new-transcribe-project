@@ -103,9 +103,9 @@ async def meta(settings: AppSettings) -> MetaResponse:
         app_name=settings.app_name,
         version=VERSION,
         commit=settings.build_commit,
-        platforms=supported_platforms(),
-        export_formats=available_formats(),
-        limits={
+        platforms=supported_platforms(),  # type: ignore[arg-type]
+        export_formats=available_formats(),  # type: ignore[arg-type]
+        limits={  # type: ignore[arg-type]
             "max_video_duration_seconds": settings.max_video_duration_seconds,
             "max_video_filesize_bytes": settings.max_video_filesize_bytes,
             "max_urls_per_request": settings.max_urls_per_request,

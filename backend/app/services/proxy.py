@@ -9,7 +9,7 @@ from app.core.errors import AppError
 logger = logging.getLogger(__name__)
 
 _cached_proxy_url = None
-_last_fetch_time = 0
+_last_fetch_time: float = 0.0
 CACHE_TTL = 3600  # Cache proxy URL for 1 hour
 
 

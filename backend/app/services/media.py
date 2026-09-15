@@ -274,7 +274,7 @@ class RealMediaBackend:
                 return
             fraction = min(1.0, downloaded / total)
             # The hook runs on the worker thread; hop back to the loop to await.
-            asyncio.run_coroutine_threadsafe(on_progress(fraction), loop)
+            asyncio.run_coroutine_threadsafe(on_progress(fraction), loop)  # type: ignore[arg-type]
 
         path = await anyio.to_thread.run_sync(self._download_sync, url, destination, hook)
         logger.info("Downloaded %s -> %s (%d bytes)", url, path.name, path.stat().st_size)

@@ -47,7 +47,7 @@ class DocxExporter(Exporter):
         doc.add_paragraph()
         doc.add_heading("Transcript", level=2)
         body = doc.add_paragraph(document.text or "(no speech detected)")
-        body.style.font.size = Pt(11)
+        body.style.font.size = Pt(11)  # type: ignore[union-attr]
 
         if document.segments:
             doc.add_page_break()

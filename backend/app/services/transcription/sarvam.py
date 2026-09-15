@@ -65,11 +65,11 @@ class SarvamProvider(TranscriptionProvider):
         self.settings = settings or get_settings()
 
     @property
-    def model_name(self) -> str | None:
+    def model_name(self) -> str | None:  # type: ignore[override]
         return self.settings.sarvam_model
 
     @property
-    def max_audio_bytes(self) -> int:
+    def max_audio_bytes(self) -> int:  # type: ignore[override]
         """Long audio is split by the pipeline before it reaches here.
 
         Expressed as a duration in settings because that is how the limit is
@@ -141,7 +141,7 @@ class SarvamProvider(TranscriptionProvider):
                 ) as client:
                     response = await client.post(
                         API_URL,
-                        headers={"api-subscription-key": self.settings.sarvam_api_key},
+                        headers={"api-subscription-key": self.settings.sarvam_api_key or ""},
                         data=data,
                         files={"file": (audio_path.name, handle, "audio/wav")},
                     )

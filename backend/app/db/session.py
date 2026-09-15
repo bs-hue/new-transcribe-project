@@ -57,7 +57,8 @@ def get_engine(settings: Settings | None = None) -> AsyncEngine:
     if _engine is None:
         settings = settings or get_settings()
         _prepare_sqlite_path(settings.database_url)
-        engine_kwargs = {
+        import typing
+        engine_kwargs: dict[str, typing.Any] = {
             "echo": False,
             "pool_pre_ping": True,
             "future": True,

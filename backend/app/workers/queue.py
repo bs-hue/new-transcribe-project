@@ -54,7 +54,7 @@ async def claim_next_job() -> str | None:
                 error_message=None,
             )
         )
-        return candidate if claimed.rowcount else None
+        return candidate if claimed.rowcount else None  # type: ignore[attr-defined]
 
 
 async def requeue_stale_jobs() -> int:
@@ -75,7 +75,7 @@ async def requeue_stale_jobs() -> int:
                 error_message="A worker stopped mid-job; this job was requeued.",
             )
         )
-        count = result.rowcount or 0
+        count = result.rowcount or 0  # type: ignore[attr-defined]
 
     if count:
         logger.warning("Requeued %d stale job(s)", count)
@@ -97,7 +97,7 @@ async def cancel_job(job_id: str) -> bool:
                 finished_at=datetime.now(UTC),
             )
         )
-        return bool(result.rowcount)
+        return bool(result.rowcount)  # type: ignore[attr-defined]
 
 
 async def retry_job(job_id: str) -> bool:
@@ -120,7 +120,7 @@ async def retry_job(job_id: str) -> bool:
                 finished_at=None,
             )
         )
-        return bool(result.rowcount)
+        return bool(result.rowcount)  # type: ignore[attr-defined]
 
 
 async def queue_depth() -> int:
