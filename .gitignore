@@ -3,6 +3,8 @@
 .env.local
 # Holds the production database password, JWT signing key and Sarvam key.
 .env.production
+# Local Docker Compose override
+docker-compose.override.yml
 # Backups of .env made while reconfiguring — these hold real keys.
 .env.backup*
 .env.*.bak
