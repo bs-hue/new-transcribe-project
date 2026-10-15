@@ -83,6 +83,22 @@ async def test_no_language_asks_sarvam_to_detect(monkeypatch, audio) -> None:
     assert captured["data"]["language_code"] == "unknown"
 
 
+async def test_auto_language_asks_sarvam_to_detect(monkeypatch, audio) -> None:
+    captured = _mock(monkeypatch, lambda: _response({"transcript": "ok"}))
+
+    await SarvamProvider(_settings()).transcribe(audio, language="auto")
+
+    assert captured["data"]["language_code"] == "unknown"
+
+
+async def test_english_is_sent_as_en_in(monkeypatch, audio) -> None:
+    captured = _mock(monkeypatch, lambda: _response({"transcript": "ok"}))
+
+    await SarvamProvider(_settings()).transcribe(audio, language="en")
+
+    assert captured["data"]["language_code"] == "en-IN"
+
+
 async def test_a_language_sarvam_cannot_do_falls_back_to_detection(monkeypatch, audio) -> None:
     """Saarika has no Urdu. Detecting is a worse answer than Urdu and a much
     better one than failing the job."""

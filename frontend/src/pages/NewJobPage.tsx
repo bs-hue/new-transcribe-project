@@ -6,6 +6,14 @@ import { Alert, AlertDescription } from "@/components/ui/alert";
 import { Button } from "@/components/ui/button";
 import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
 import { Checkbox } from "@/components/ui/checkbox";
+import { Label } from "@/components/ui/label";
+import {
+  Select,
+  SelectContent,
+  SelectItem,
+  SelectTrigger,
+  SelectValue,
+} from "@/components/ui/select";
 import { Textarea } from "@/components/ui/textarea";
 import { api } from "@/lib/api";
 import { errorMessage } from "@/lib/auth";
@@ -30,6 +38,7 @@ export function NewJobPage() {
   const [text, setText] = useState("");
   const [busy, setBusy] = useState(false);
   const [error, setError] = useState<string | null>(null);
+  const [language, setLanguage] = useState<string>("auto");
 
   const [previews, setPreviews] = useState<Preview[]>([]);
   const [selected, setSelected] = useState<Set<string>>(new Set());
@@ -76,7 +85,7 @@ export function NewJobPage() {
 
     setBusy(true);
     try {
-      const submission = await api.submit(chosen);
+      const submission = await api.submit(chosen, language);
       const firstJob = submission.results.find((r) => r.accepted)?.job_id;
       if (firstJob) {
         navigate(`/jobs/${firstJob}`);
@@ -88,7 +97,7 @@ export function NewJobPage() {
     } finally {
       setBusy(false);
     }
-  }, [previews, selected, navigate]);
+  }, [previews, selected, language, navigate]);
 
   const toggle = useCallback((url: string) => {
     setSelected((current) => {
@@ -156,6 +165,36 @@ export function NewJobPage() {
               className="resize-y font-mono text-xs leading-relaxed"
             />
 
+            <div className="rounded-lg border bg-muted/30 p-3.5 space-y-2">
+              <div className="flex flex-col sm:flex-row sm:items-center justify-between gap-3">
+                <div className="space-y-0.5">
+                  <Label htmlFor="language-select" className="text-sm font-medium">Audio Language</Label>
+                  <p className="text-xs text-muted-foreground">
+                    Auto-detect transcribes Hindi audio into Hindi and English audio into English.
+                  </p>
+                </div>
+                <Select value={language} onValueChange={setLanguage}>
+                  <SelectTrigger id="language-select" className="w-full sm:w-[260px] bg-background">
+                    <SelectValue placeholder="Select language" />
+                  </SelectTrigger>
+                  <SelectContent>
+                    <SelectItem value="auto">Auto-detect (Hindi, English, etc.)</SelectItem>
+                    <SelectItem value="hi">Hindi (हिन्दी)</SelectItem>
+                    <SelectItem value="en">English</SelectItem>
+                    <SelectItem value="mr">Marathi (मराठी)</SelectItem>
+                    <SelectItem value="gu">Gujarati (ગુજરાતી)</SelectItem>
+                    <SelectItem value="bn">Bengali (বাংলা)</SelectItem>
+                    <SelectItem value="ta">Tamil (தமிழ்)</SelectItem>
+                    <SelectItem value="te">Telugu (తెలుగు)</SelectItem>
+                    <SelectItem value="kn">Kannada (ಕನ್ನಡ)</SelectItem>
+                    <SelectItem value="ml">Malayalam (മലയാളം)</SelectItem>
+                    <SelectItem value="pa">Punjabi (ਪੰਜਾਬੀ)</SelectItem>
+                    <SelectItem value="ur">Urdu (اردو)</SelectItem>
+                  </SelectContent>
+                </Select>
+              </div>
+            </div>
+
             <div className="flex items-center justify-between gap-4">
               <span className="text-xs text-muted-foreground">
                 {urls.length} URL{urls.length === 1 ? "" : "s"} detected
@@ -181,6 +220,8 @@ export function NewJobPage() {
         <ReviewStep
           previews={previews}
           selected={selected}
+          language={language}
+          onLanguageChange={setLanguage}
           onToggle={toggle}
           onBack={() => setStep("input")}
           onStart={start}
@@ -195,6 +236,8 @@ export function NewJobPage() {
 function ReviewStep({
   previews,
   selected,
+  language,
+  onLanguageChange,
   onToggle,
   onBack,
   onStart,
@@ -202,6 +245,8 @@ function ReviewStep({
 }: {
   previews: Preview[];
   selected: Set<string>;
+  language: string;
+  onLanguageChange: (lang: string) => void;
   onToggle: (url: string) => void;
   onBack: () => void;
   onStart: () => void;
@@ -223,6 +268,36 @@ function ReviewStep({
           </div>
           <span className="text-sm text-muted-foreground">{selected.size} selected</span>
         </CardHeader>
+
+        <div className="flex flex-col sm:flex-row sm:items-center justify-between gap-3 p-4 bg-muted/20 border-t">
+          <div className="space-y-0.5">
+            <span className="text-xs font-semibold uppercase tracking-wider text-muted-foreground">Audio Language</span>
+            <p className="text-xs text-muted-foreground">
+              {language === "auto"
+                ? "Auto-detecting per audio (Hindi audio -> Hindi transcript, English audio -> English transcript)"
+                : `Forcing all selected videos to ${language.toUpperCase()}`}
+            </p>
+          </div>
+          <Select value={language} onValueChange={onLanguageChange}>
+            <SelectTrigger className="w-full sm:w-[240px] h-8 text-xs bg-background">
+              <SelectValue />
+            </SelectTrigger>
+            <SelectContent>
+              <SelectItem value="auto">Auto-detect (Hindi, English, etc.)</SelectItem>
+              <SelectItem value="hi">Hindi (हिन्दी)</SelectItem>
+              <SelectItem value="en">English</SelectItem>
+              <SelectItem value="mr">Marathi (मराठी)</SelectItem>
+              <SelectItem value="gu">Gujarati (ગુજરાતી)</SelectItem>
+              <SelectItem value="bn">Bengali (বাংলা)</SelectItem>
+              <SelectItem value="ta">Tamil (தமிழ்)</SelectItem>
+              <SelectItem value="te">Telugu (తెలుగు)</SelectItem>
+              <SelectItem value="kn">Kannada (ಕನ್ನಡ)</SelectItem>
+              <SelectItem value="ml">Malayalam (മലയാളം)</SelectItem>
+              <SelectItem value="pa">Punjabi (ਪੰਜਾਬੀ)</SelectItem>
+              <SelectItem value="ur">Urdu (اردو)</SelectItem>
+            </SelectContent>
+          </Select>
+        </div>
 
         <div className="divide-y border-t">
           {previews.map((preview) => (

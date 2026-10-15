@@ -87,7 +87,7 @@ class SarvamProvider(TranscriptionProvider):
             )
 
     def _language_for(self, language: str | None) -> str:
-        if not language:
+        if not language or str(language).strip().lower() in ("auto", "unknown", "detect", "none", ""):
             return AUTO
         code = LANGUAGE_CODES.get(language.lower())
         if code is None:

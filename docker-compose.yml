@@ -48,8 +48,8 @@ services:
       dockerfile_inline: |
         FROM caddy:2-alpine
         COPY Caddyfile /etc/caddy/Caddyfile
-    expose:
-      - "80"
+    ports:
+      - "80:80"
     environment:
       DOMAIN: ${DOMAIN:-localhost}
       ACME_EMAIL: ${ACME_EMAIL:-admin@example.com}

@@ -65,7 +65,7 @@ def normalise(value: str | None) -> str | None:
     if value is None:
         return None
     text = value.strip()
-    if not text:
+    if not text or text.lower() in ("auto", "unknown", "detect", "none"):
         return None
 
     lowered = text.lower()

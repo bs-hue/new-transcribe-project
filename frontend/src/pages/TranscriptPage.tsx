@@ -1,4 +1,4 @@
-import { ArrowLeft, Copy, FileText, Trash2 } from "lucide-react";
+import { ArrowLeft, Copy, FileText, RotateCw, Trash2 } from "lucide-react";
 import { useCallback, useEffect, useState } from "react";
 import { Link, useNavigate, useParams } from "react-router-dom";
 import { ExportMenu } from "@/components/ExportMenu";
@@ -10,6 +10,7 @@ import { api } from "@/lib/api";
 import { errorMessage } from "@/lib/auth";
 import { formatDate, formatDuration, formatTimecode, joinParts, stageLabel } from "@/lib/format";
 import type { VideoDetail } from "@/lib/types";
+import { cn } from "@/lib/utils";
 
 export function TranscriptPage() {
   const { videoId = "" } = useParams();
@@ -45,6 +46,27 @@ export function TranscriptPage() {
     const handle = setInterval(() => void load(), 2500);
     return () => clearInterval(handle);
   }, [pending, load]);
+
+  const [retranscribing, setRetranscribing] = useState(false);
+
+  async function retranscribe() {
+    if (!video) return;
+    if (!confirm("Re-transcribe this video with Auto-detect language?")) return;
+    setRetranscribing(true);
+    try {
+      const res = await api.submit([video.canonical_url || video.source_url], "auto");
+      const jobId = res.results.find((r) => r.accepted)?.job_id;
+      if (jobId) {
+        navigate(`/jobs/${jobId}`);
+      } else {
+        await load();
+      }
+    } catch (err) {
+      setError(errorMessage(err, "Could not start re-transcription."));
+    } finally {
+      setRetranscribing(false);
+    }
+  }
 
   async function copy() {
     if (!video?.transcript) return;
@@ -118,6 +140,16 @@ export function TranscriptPage() {
                 />
               </>
             ) : null}
+            <Button
+              variant="outline"
+              size="sm"
+              onClick={retranscribe}
+              disabled={retranscribing}
+              title="Re-transcribe with Auto-detect language"
+            >
+              <RotateCw className={cn("h-3.5 w-3.5 mr-1.5", retranscribing && "animate-spin")} />
+              {retranscribing ? "Starting…" : "Re-transcribe"}
+            </Button>
             <Button variant="ghost" size="icon" onClick={remove} title="Delete">
               <Trash2 />
             </Button>

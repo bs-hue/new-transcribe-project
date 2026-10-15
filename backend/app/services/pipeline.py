@@ -198,7 +198,11 @@ class Pipeline:
         provider = self.provider_for(settings)
         # A language chosen for this batch wins; otherwise the standing choice
         # from the Settings screen, which is the one people actually maintain.
-        language = ctx.language or settings.transcription_language
+        raw_lang = ctx.language if ctx.language is not None else settings.transcription_language
+        if raw_lang and str(raw_lang).strip().lower() in ("auto", "unknown", "detect", "none", ""):
+            language = None
+        else:
+            language = (str(raw_lang).strip() if raw_lang else None) or None
         cap = provider.max_audio_bytes
         size = ctx.audio_path.stat().st_size
 
