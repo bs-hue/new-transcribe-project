@@ -12,6 +12,7 @@ from app.services import pipeline as pipeline_module
 from app.services.ingest import submit_urls
 from app.services.metadata import VideoMetadata
 from app.services.pipeline import Pipeline
+from app.services.transcription import TranscriptSegmentData
 from app.workers.queue import cancel_job, claim_next_job, requeue_stale_jobs, retry_job
 
 URL = "https://www.youtube.com/watch?v=dQw4w9WgXcQ"
@@ -236,3 +237,90 @@ async def test_retry_puts_a_failed_job_back_on_the_queue(
 
     assert await retry_job(job_id) is True
     assert await claim_next_job() == job_id
+
+
+async def test_transliterated_devanagari_english_triggers_retranscription(
+    session, fake_media, patched_metadata, settings
+) -> None:
+    job_id = await _submit(session)
+
+    calls = []
+
+    class GuardTestProvider:
+        name = "stub"
+        model_name = "mock-model"
+        max_audio_bytes = None
+
+        async def transcribe(self, audio_path, *, language=None):
+            calls.append(language)
+            if language == "en":
+                return pipeline_module.TranscriptionResult(
+                    text="What is customer lifetime value also known as LTV? This is the total revenue.",
+                    segments=[
+                        TranscriptSegmentData(
+                            index=0, start=0.0, end=3.0, text="What is customer lifetime value"
+                        )
+                    ],
+                    language="en",
+                    provider="mock",
+                    model="mock-model",
+                )
+            return pipeline_module.TranscriptionResult(
+                text="व्हाट इज कस्टमर लाइफटाइम वैल्यू आल्सो नोन एज एलटीबी? दिस इज द टोटल रेवेन्यू दैट अ बिजनेस कैन रीजनेबली एक्सपेक्ट।",
+                segments=[
+                    TranscriptSegmentData(
+                        index=0, start=0.0, end=3.0, text="व्हाट इज कस्टमर लाइफटाइम वैल्यू"
+                    )
+                ],
+                language="hi",
+                provider="mock",
+                model="mock-model",
+            )
+
+    pipeline = Pipeline(settings, provider=GuardTestProvider())
+    await pipeline.run(job_id)
+
+    await session.commit()
+    transcript = (await session.execute(select(Transcript))).scalar_one()
+    assert calls == [None, "en"]
+    assert transcript.language == "en"
+    assert "What is customer lifetime value" in transcript.text
+
+
+async def test_genuine_hindi_does_not_trigger_retranscription(
+    session, fake_media, patched_metadata, settings
+) -> None:
+    job_id = await _submit(session)
+
+    calls = []
+
+    class GenuineHindiProvider:
+        name = "stub"
+        model_name = "mock-model"
+        max_audio_bytes = None
+
+        async def transcribe(self, audio_path, *, language=None):
+            calls.append(language)
+            return pipeline_module.TranscriptionResult(
+                text="आपकी कुंडली में 12 हाउस होते हैं, उसमें सबसे महंगा हाउस है चौथा घर क्योंकि इसी में आप अपनी लाइफ में कितनी प्रॉपर्टी बनाएंगे।",
+                segments=[
+                    TranscriptSegmentData(
+                        index=0, start=0.0, end=3.0, text="आपकी कुंडली में 12 हाउस होते हैं"
+                    )
+                ],
+                language="hi",
+                provider="mock",
+                model="mock-model",
+            )
+
+    pipeline = Pipeline(settings, provider=GenuineHindiProvider())
+    await pipeline.run(job_id)
+
+    await session.commit()
+    transcript = (await session.execute(select(Transcript))).scalar_one()
+    # Verified only called once with None, kept as Hindi!
+    assert calls == [None]
+    assert transcript.language == "hi"
+    assert "आपकी कुंडली में 12 हाउस होते हैं" in transcript.text
+
+

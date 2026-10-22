@@ -36,6 +36,10 @@ from app.services.transcription import (
     get_transcription_provider,
     merge_results,
 )
+from app.services.transcription.detect import (
+    detect_language,
+    is_devanagari_transliterated_english,
+)
 
 logger = logging.getLogger(__name__)
 
@@ -250,27 +254,60 @@ class Pipeline:
             language = None
         else:
             language = (str(raw_lang).strip() if raw_lang else None) or None
+        if language is None and provider.name != "stub":
+            # Decide once for the whole video. Left to the provider, each 30s
+            # chunk is guessed separately and Indian-accented English comes
+            # back as Devanagari; an explicit language prevents that.
+            language = await detect_language(ctx.audio_path, settings)
         cap = provider.max_audio_bytes
         size = ctx.audio_path.stat().st_size
 
         if cap is None or size <= cap:
             ctx.result = await provider.transcribe(ctx.audio_path, language=language)
-            return
+        else:
+            # Too large for the provider: split, transcribe each part, and stitch the
+            # timestamps back onto the original timeline.
+            # Floor of 10s, not 60: a hosted provider's per-request limit can be
+            # shorter than a minute, and a chunk larger than the cap is refused.
+            chunk_seconds = max(10, int(cap * 0.9 / _BYTES_PER_AUDIO_SECOND))
+            chunks = await self.media_for(settings).split_audio(ctx.audio_path, chunk_seconds)
+            logger.info("Audio is %d bytes; transcribing in %d chunks", size, len(chunks))
 
-        # Too large for the provider: split, transcribe each part, and stitch the
-        # timestamps back onto the original timeline.
-        # Floor of 10s, not 60: a hosted provider's per-request limit can be
-        # shorter than a minute, and a chunk larger than the cap is refused.
-        chunk_seconds = max(10, int(cap * 0.9 / _BYTES_PER_AUDIO_SECOND))
-        chunks = await self.media_for(settings).split_audio(ctx.audio_path, chunk_seconds)
-        logger.info("Audio is %d bytes; transcribing in %d chunks", size, len(chunks))
+            results: list[tuple[TranscriptionResult, float]] = []
+            for position, (chunk_path, offset) in enumerate(chunks):
+                await self._set_stage(ctx.job_id, JobStage.TRANSCRIBING, position / max(len(chunks), 1))
+                results.append((await provider.transcribe(chunk_path, language=language), offset))
 
-        results: list[tuple[TranscriptionResult, float]] = []
-        for position, (chunk_path, offset) in enumerate(chunks):
-            await self._set_stage(ctx.job_id, JobStage.TRANSCRIBING, position / max(len(chunks), 1))
-            results.append((await provider.transcribe(chunk_path, language=language), offset))
+            ctx.result = merge_results(results, provider=provider.name, model=provider.model_name)
 
-        ctx.result = merge_results(results, provider=provider.name, model=provider.model_name)
+        # Guard against English speech being transcribed into Devanagari script:
+        # If the result came back as Hindi (hi) but contains transliterated English words,
+        # re-transcribe as English (en) if the user did not explicitly force "hi".
+        if (
+            ctx.result
+            and ctx.result.language == "hi"
+            and (ctx.language in (None, "", "auto", "unknown", "detect"))
+            and is_devanagari_transliterated_english(ctx.result.text)
+        ):
+            logger.warning(
+                "Transcript was returned as Hindi (Devanagari) but detected as phonetically "
+                "transcribed English words ('%s...'). Re-transcribing with language='en'.",
+                ctx.result.text[:60],
+            )
+            if cap is None or size <= cap:
+                ctx.result = await provider.transcribe(ctx.audio_path, language="en")
+            else:
+                re_results: list[tuple[TranscriptionResult, float]] = []
+                for position, (chunk_path, offset) in enumerate(chunks):
+                    await self._set_stage(
+                        ctx.job_id, JobStage.TRANSCRIBING, position / max(len(chunks), 1)
+                    )
+                    re_results.append(
+                        (await provider.transcribe(chunk_path, language="en"), offset)
+                    )
+                ctx.result = merge_results(
+                    re_results, provider=provider.name, model=provider.model_name
+                )
 
     async def _stage_store(self, ctx: PipelineContext) -> None:
         await self._set_stage(ctx.job_id, JobStage.STORING)

@@ -31,15 +31,19 @@ logger = logging.getLogger(__name__)
 
 
 def resolve_device(requested: str) -> str:
-    """Turn ``auto`` into the device actually present."""
+    """Turn ``auto`` into the device actually present and functional."""
     if requested != "auto":
         return requested
     try:
         import ctranslate2
 
         if ctranslate2.get_cuda_device_count() > 0:
+            if os.name == "nt":
+                import ctypes
+
+                ctypes.CDLL("cublas64_12.dll")
             return "cuda"
-    except Exception:  # noqa: BLE001 — any failure here just means "no GPU"
+    except Exception:  # noqa: BLE001 — any failure here just means "no GPU or CUDA libraries missing"
         pass
     return "cpu"
 
@@ -89,12 +93,23 @@ def _load_model(model_size: str, device: str, compute_type: str, cpu_threads: in
         compute_type,
         cpu_threads,
     )
-    return WhisperModel(
-        model_size,
-        device=device,
-        compute_type=compute_type,
-        cpu_threads=cpu_threads if device == "cpu" else 0,
-    )
+    try:
+        return WhisperModel(
+            model_size,
+            device=device,
+            compute_type=compute_type,
+            cpu_threads=cpu_threads if device == "cpu" else 0,
+        )
+    except Exception as exc:
+        if device == "cuda":
+            logger.warning("CUDA load failed (%s); falling back to CPU", exc)
+            return WhisperModel(
+                model_size,
+                device="cpu",
+                compute_type="int8",
+                cpu_threads=cpu_threads or (os.cpu_count() or 4),
+            )
+        raise
 
 
 @lru_cache(maxsize=2)

@@ -129,6 +129,10 @@ class Settings(BaseSettings):
     #: opens on music or an English word gets the whole video's language wrong.
     #: Sampling several and taking the confident answer is far steadier.
     faster_whisper_language_detection_segments: int = 4
+    #: Whisper model used only to decide English vs Hindi (etc.) once per video
+    #: before a hosted provider such as Sarvam transcribes it. Small and fast;
+    #: when transcribing locally the main faster-whisper model is reused.
+    language_detection_model: str = "small"
 
     # --- Limits ---
     max_video_duration_seconds: int = 7200
