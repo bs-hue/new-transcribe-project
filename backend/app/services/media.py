@@ -442,3 +442,69 @@ def set_media_backend(backend: MediaBackend | None) -> None:
     """Swap the backend. Used by tests to run the pipeline without network."""
     global _backend
     _backend = backend
+
+
+async def probe_and_thumbnail(
+    media_path: Path,
+    thumbnail_dest: Path,
+    settings: Settings,
+) -> tuple[float | None, bool]:
+    """Probe duration in seconds using ffprobe, and extract a thumbnail frame using ffmpeg.
+
+    Returns (duration_seconds, thumbnail_created).
+    """
+    import subprocess
+
+    def _sync_probe() -> tuple[float | None, bool]:
+        duration: float | None = None
+        has_thumbnail = False
+
+        # 1. ffprobe duration
+        try:
+            cmd = [
+                settings.ffprobe_binary,
+                "-v",
+                "error",
+                "-show_entries",
+                "format=duration",
+                "-of",
+                "default=noprint_wrappers=1:nokey=1",
+                str(media_path),
+            ]
+            res = subprocess.run(
+                cmd, stdout=subprocess.PIPE, stderr=subprocess.PIPE, text=True, timeout=10
+            )
+            if res.returncode == 0 and res.stdout.strip():
+                duration = round(float(res.stdout.strip()), 2)
+        except Exception as e:
+            logger.debug("ffprobe failed: %s", e)
+
+        # 2. ffmpeg thumbnail frame
+        try:
+            thumbnail_dest.parent.mkdir(parents=True, exist_ok=True)
+            ss = "00:00:01" if (duration and duration > 1.5) else "00:00:00"
+            cmd_thumb = [
+                settings.ffmpeg_binary,
+                "-nostdin",
+                "-y",
+                "-ss",
+                ss,
+                "-i",
+                str(media_path),
+                "-vframes",
+                "1",
+                "-q:v",
+                "3",
+                str(thumbnail_dest),
+            ]
+            res_thumb = subprocess.run(
+                cmd_thumb, stdout=subprocess.PIPE, stderr=subprocess.PIPE, timeout=15
+            )
+            if res_thumb.returncode == 0 and thumbnail_dest.exists() and thumbnail_dest.stat().st_size > 0:
+                has_thumbnail = True
+        except Exception as e:
+            logger.debug("ffmpeg thumbnail failed: %s", e)
+
+        return duration, has_thumbnail
+
+    return await anyio.to_thread.run_sync(_sync_probe)

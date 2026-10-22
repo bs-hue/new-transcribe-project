@@ -37,6 +37,9 @@ def _normalise(raw_url: str) -> str:
     if not url:
         raise InvalidURLError("URL is empty.")
 
+    if url.startswith("upload://"):
+        return url
+
     if "://" not in url:
         url = f"https://{url}"
 
@@ -62,6 +65,17 @@ def parse_url(raw_url: str) -> ParsedURL:
         UnsupportedURLError: it is a URL, but not a video we support.
     """
     url = _normalise(raw_url)
+
+    if url.startswith("upload://"):
+        parts = url.removeprefix("upload://").split("/", 1)
+        video_id = parts[0] if parts and parts[0] else "upload"
+        return ParsedURL(
+            platform="upload",
+            platform_display_name="Uploaded Video",
+            video_id=video_id,
+            canonical_url=url,
+            original_url=raw_url.strip(),
+        )
 
     for adapter in _ADAPTERS:
         parsed = adapter.parse(url)

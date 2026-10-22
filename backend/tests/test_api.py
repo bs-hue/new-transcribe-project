@@ -99,6 +99,28 @@ async def test_submit_rejects_an_empty_list(client) -> None:
     assert (await client.post("/api/videos", json={"urls": []})).status_code == 422
 
 
+async def test_upload_video_accepts_file_and_queues_job(client) -> None:
+    fake_content = b"\x00\x00\x00\x20ftypmp42" + b"A" * 1024
+    files = {"file": ("demo.mp4", io.BytesIO(fake_content), "video/mp4")}
+    data = {"title": "My Uploaded Video", "language": "en"}
+
+    response = await client.post("/api/videos/upload", files=files, data=data)
+    assert response.status_code == 202
+    body = response.json()
+    assert body["job_id"]
+    assert body["video_id"]
+    assert body["title"] == "My Uploaded Video"
+    assert body["canonical_url"].startswith("upload://")
+    assert body["status"] == "queued"
+
+
+async def test_upload_video_rejects_invalid_extension(client) -> None:
+    files = {"file": ("malicious.exe", io.BytesIO(b"binary"), "application/octet-stream")}
+    response = await client.post("/api/videos/upload", files=files)
+    assert response.status_code == 400
+    assert "Unsupported file format" in response.json()["message"]
+
+
 async def test_preview_returns_metadata_without_downloading(
     client, monkeypatch, fake_media
 ) -> None:

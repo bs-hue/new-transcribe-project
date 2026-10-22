@@ -92,6 +92,17 @@ export interface Submission {
   results: SubmissionOutcome[];
 }
 
+export interface UploadResponse {
+  job_id: string;
+  video_id: string;
+  batch_id: string;
+  title: string;
+  canonical_url: string;
+  status: string;
+  duration_seconds: number | null;
+  thumbnail_url: string | null;
+}
+
 export interface VideoSummary {
   id: string;
   platform: string;

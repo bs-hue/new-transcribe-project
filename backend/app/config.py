@@ -137,6 +137,7 @@ class Settings(BaseSettings):
 
     # --- Media ---
     work_dir: Path = Path("./data/work")
+    upload_dir: Path = Path("./data/uploads")
     ffmpeg_binary: str = "ffmpeg"
     ffprobe_binary: str = "ffprobe"
     keep_media: bool = False
@@ -197,6 +198,14 @@ class Settings(BaseSettings):
     def resolved_work_dir(self) -> Path:
         """Absolute work directory, created on demand."""
         path = self.work_dir
+        if not path.is_absolute():
+            path = (_REPO_ROOT / path).resolve()
+        path.mkdir(parents=True, exist_ok=True)
+        return path
+
+    def resolved_upload_dir(self) -> Path:
+        """Absolute upload directory, created on demand."""
+        path = self.upload_dir
         if not path.is_absolute():
             path = (_REPO_ROOT / path).resolve()
         path.mkdir(parents=True, exist_ok=True)

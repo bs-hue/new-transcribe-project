@@ -15,10 +15,12 @@ import {
   Search,
   Shield,
   ShieldCheck,
+  Upload,
   User,
 } from "lucide-react";
 import { useCallback, useEffect, useState } from "react";
 import { Link } from "react-router-dom";
+import { VideoUploadModal } from "@/components/VideoUploadModal";
 import {
   ErrorNotice,
   PlatformBadge,
@@ -52,6 +54,7 @@ export function DashboardPage() {
   const [error, setError] = useState<string | null>(null);
   const [loading, setLoading] = useState(true);
   const [refreshing, setRefreshing] = useState(false);
+  const [uploadModalOpen, setUploadModalOpen] = useState(false);
 
   const load = useCallback(async (force = false) => {
     if (force) setRefreshing(true);
@@ -134,10 +137,21 @@ export function DashboardPage() {
             </Link>
           </Button>
 
+          <Button
+            variant="outline"
+            size="sm"
+            onClick={() => setUploadModalOpen(true)}
+            className="h-8 sm:h-9 gap-1.5 text-xs font-medium"
+            title="Upload local video or audio file"
+          >
+            <Upload className="h-3.5 w-3.5 text-primary" />
+            <span>Upload Video</span>
+          </Button>
+
           <Button asChild size="sm" className="h-8 sm:h-9 gap-1.5 text-xs font-medium shadow-sm">
             <Link to="/jobs/new">
               <Plus className="h-3.5 w-3.5" />
-              <span>Add Videos</span>
+              <span>Paste URLs</span>
             </Link>
           </Button>
         </div>
@@ -158,15 +172,23 @@ export function DashboardPage() {
                 Start your research library
               </h2>
               <p className="text-xs sm:text-sm text-muted-foreground leading-relaxed">
-                Paste any YouTube video or Instagram Reel URL to automatically download, extract audio, and generate accurate timestamps & transcripts.
+                Paste any YouTube video or Instagram Reel URL, or upload local video files directly to extract audio and generate accurate timestamps & transcripts.
               </p>
             </div>
 
-            <div className="pt-2">
-              <Button asChild size="default" className="rounded-xl px-5 sm:px-6 gap-2 shadow-sm font-medium">
+            <div className="pt-2 flex items-center justify-center gap-2.5 flex-wrap">
+              <Button
+                size="default"
+                onClick={() => setUploadModalOpen(true)}
+                className="rounded-xl px-5 sm:px-6 gap-2 shadow-sm font-medium"
+              >
+                <Upload className="h-4 w-4" />
+                <span>Upload Video</span>
+              </Button>
+              <Button asChild variant="outline" size="default" className="rounded-xl px-5 sm:px-6 gap-2 font-medium">
                 <Link to="/jobs/new">
                   <Plus className="h-4 w-4" />
-                  <span>Transcribe First Video</span>
+                  <span>Paste URLs</span>
                 </Link>
               </Button>
             </div>
@@ -209,6 +231,30 @@ export function DashboardPage() {
               variant="default"
             />
           </section>
+
+          {/* Quick Upload Video Action Card */}
+          <div className="rounded-2xl border border-dashed border-primary/30 bg-gradient-to-r from-primary/5 via-card to-primary/5 p-4 sm:p-5 flex flex-col sm:flex-row items-center justify-between gap-4 shadow-xs hover:border-primary/50 transition-colors">
+            <div className="flex items-center gap-3.5 text-center sm:text-left">
+              <div className="flex h-11 w-11 shrink-0 items-center justify-center rounded-xl bg-primary/10 text-primary border border-primary/20 shadow-xs">
+                <Upload className="h-5 w-5" />
+              </div>
+              <div className="space-y-0.5">
+                <h3 className="font-heading text-sm sm:text-base font-semibold text-foreground">
+                  Upload video or audio from your device
+                </h3>
+                <p className="text-xs text-muted-foreground">
+                  Transcribe local MP4, MOV, MKV, WebM, MP3 or WAV files directly into your research library with timestamps.
+                </p>
+              </div>
+            </div>
+            <Button
+              onClick={() => setUploadModalOpen(true)}
+              className="gap-2 text-xs font-medium shrink-0 h-9 px-4 rounded-xl shadow-xs"
+            >
+              <Upload className="h-3.5 w-3.5" />
+              <span>Upload & Transcribe</span>
+            </Button>
+          </div>
 
           {/* Active Processing Section */}
           <section className="space-y-3">
@@ -381,6 +427,16 @@ export function DashboardPage() {
 
       {/* Account & Security Section */}
       <AccountSecuritySection user={user} />
+
+      {/* Video Upload Modal */}
+      <VideoUploadModal
+        open={uploadModalOpen}
+        onClose={() => setUploadModalOpen(false)}
+        onSuccess={() => {
+          setUploadModalOpen(false);
+          void load(true);
+        }}
+      />
     </div>
   );
 }

@@ -11,6 +11,7 @@ and nothing else changes.
 from __future__ import annotations
 
 import logging
+import shutil
 from dataclasses import dataclass, field
 from datetime import UTC, datetime
 from pathlib import Path
@@ -134,7 +135,29 @@ class Pipeline:
 
     async def _stage_metadata(self, ctx: PipelineContext) -> None:
         await self._set_stage(ctx.job_id, JobStage.FETCHING_METADATA)
-        ctx.parsed = parse_url(ctx.source_url or ctx.canonical_url)
+        url = ctx.source_url or ctx.canonical_url
+        ctx.parsed = parse_url(url)
+
+        if url.startswith("upload://"):
+            async with session_scope() as session:
+                video = await session.get(Video, ctx.video_id)
+                if video is not None:
+                    ctx.metadata = VideoMetadata(
+                        platform="upload",
+                        platform_video_id=ctx.parsed.video_id,
+                        canonical_url=video.canonical_url,
+                        title=video.title or "Uploaded Video",
+                        author=video.author or "Uploaded Video",
+                        author_url=video.author_url,
+                        thumbnail_url=video.thumbnail_url,
+                        duration_seconds=video.duration_seconds,
+                        estimated_size_bytes=video.estimated_size_bytes,
+                        description=video.description,
+                        published_at=video.published_at,
+                        raw=video.raw_metadata or {},
+                    )
+            return
+
         ctx.metadata = await fetch_metadata(ctx.parsed, ctx.settings or self.settings)
 
         async with session_scope() as session:
@@ -149,6 +172,30 @@ class Pipeline:
 
     async def _stage_download(self, ctx: PipelineContext) -> None:
         await self._set_stage(ctx.job_id, JobStage.DOWNLOADING)
+
+        if (ctx.canonical_url or "").startswith("upload://"):
+            parts = ctx.canonical_url.removeprefix("upload://").split("/", 1)
+            upload_id = parts[0]
+            filename = parts[1] if len(parts) > 1 else "source.mp4"
+            settings = ctx.settings or self.settings
+            upload_dir = settings.resolved_upload_dir() / upload_id
+            upload_path = upload_dir / filename
+            if not upload_path.exists():
+                candidates = [
+                    f
+                    for f in upload_dir.glob("*")
+                    if f.is_file() and not f.name.startswith("thumbnail")
+                ]
+                if candidates:
+                    upload_path = candidates[0]
+                else:
+                    raise AppError(f"Uploaded media file was not found: {ctx.canonical_url}")
+
+            dest = ctx.work.path / upload_path.name
+            shutil.copy2(upload_path, dest)
+            ctx.video_path = dest
+            await self._set_stage(ctx.job_id, JobStage.DOWNLOADING, 1.0)
+            return
 
         last_reported = 0.0
 

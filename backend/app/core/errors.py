@@ -113,3 +113,10 @@ class ForbiddenError(AppError):
 
     code = "forbidden"
     status_code = 403
+
+
+class UnsupportedFileFormatError(AppError):
+    """The uploaded file format is not supported."""
+
+    code = "unsupported_file_format"
+    status_code = 400

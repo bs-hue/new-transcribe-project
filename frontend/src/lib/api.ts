@@ -19,6 +19,7 @@ import type {
   SystemCheck,
   TokenResponse,
   TranscriptDetail,
+  UploadResponse,
   User,
   VideoDetail,
   VideoSummary,
@@ -31,9 +32,11 @@ import type {
  *  the browser never needs to know a second address. A value is only needed
  *  when the two are genuinely apart — running `npm run dev` against a backend
  *  on another port, for instance. */
-const BASE_URL = (
+export const API_BASE_URL = (
   (import.meta.env.VITE_API_BASE_URL as string | undefined) ?? ""
 ).replace(/\/$/, "");
+
+const BASE_URL = API_BASE_URL;
 
 const TOKEN_KEY = "research-hub.token";
 
@@ -268,6 +271,74 @@ export const api = {
     return request<Submission>("/api/videos", {
       method: "POST",
       body: JSON.stringify({ urls, language: language || null }),
+    });
+  },
+
+  uploadVideo: (
+    file: File,
+    options?: {
+      title?: string;
+      language?: string;
+      onProgress?: (percent: number) => void;
+    },
+  ): Promise<UploadResponse> => {
+    clearApiCache("/api/dashboard");
+    clearApiCache("/api/jobs");
+    clearApiCache("/api/videos");
+
+    return new Promise((resolve, reject) => {
+      const formData = new FormData();
+      formData.append("file", file);
+      if (options?.title) formData.append("title", options.title);
+      if (options?.language) formData.append("language", options.language);
+
+      const xhr = new XMLHttpRequest();
+      xhr.open("POST", `${BASE_URL}/api/videos/upload`);
+
+      const token = tokenStore.get();
+      if (token) {
+        xhr.setRequestHeader("Authorization", `Bearer ${token}`);
+      }
+
+      if (options?.onProgress && xhr.upload) {
+        xhr.upload.onprogress = (event) => {
+          if (event.lengthComputable) {
+            const pct = Math.round((event.loaded / event.total) * 100);
+            options.onProgress?.(pct);
+          }
+        };
+      }
+
+      xhr.onload = () => {
+        if (xhr.status === 401) {
+          tokenStore.clear();
+          onUnauthorized();
+          reject(new ApiError("Unauthorized", "auth_error", 401));
+          return;
+        }
+
+        try {
+          const data = JSON.parse(xhr.responseText);
+          if (xhr.status >= 200 && xhr.status < 300) {
+            resolve(data as UploadResponse);
+          } else {
+            const message = data?.message || data?.detail || `Upload failed with status ${xhr.status}`;
+            reject(new ApiError(message, data?.code || "upload_error", xhr.status));
+          }
+        } catch {
+          if (xhr.status >= 200 && xhr.status < 300) {
+            resolve({} as UploadResponse);
+          } else {
+            reject(new ApiError(`Upload failed with status ${xhr.status}`, "upload_error", xhr.status));
+          }
+        }
+      };
+
+      xhr.onerror = () => {
+        reject(new ApiError("Cannot reach the server. Check your connection.", "network_error"));
+      };
+
+      xhr.send(formData);
     });
   },
 

@@ -1,7 +1,8 @@
-import { AlertTriangle, ArrowRight } from "lucide-react";
+import { AlertTriangle, ArrowRight, Upload } from "lucide-react";
 import { useCallback, useEffect, useState } from "react";
 import { useNavigate } from "react-router-dom";
 import { ErrorNotice, PlatformBadge, Thumbnail } from "@/components/shared";
+import { VideoUploadModal } from "@/components/VideoUploadModal";
 import { Alert, AlertDescription } from "@/components/ui/alert";
 import { Button } from "@/components/ui/button";
 import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
@@ -39,6 +40,7 @@ export function NewJobPage() {
   const [busy, setBusy] = useState(false);
   const [error, setError] = useState<string | null>(null);
   const [language, setLanguage] = useState<string>("auto");
+  const [uploadModalOpen, setUploadModalOpen] = useState(false);
 
   const [previews, setPreviews] = useState<Preview[]>([]);
   const [selected, setSelected] = useState<Set<string>>(new Set());
@@ -112,12 +114,22 @@ export function NewJobPage() {
 
   return (
     <div className="space-y-8 max-w-4xl mx-auto">
-      <header className="space-y-1">
-        <h1 className="font-heading text-2xl sm:text-3xl font-bold tracking-tight">Add videos to research</h1>
-        <p className="text-sm text-muted-foreground">
-          Paste the links. The system reads each video&apos;s details, downloads it,
-          transcribes it, and files it in the library — searchable and exportable.
-        </p>
+      <header className="flex flex-col sm:flex-row sm:items-center justify-between gap-4">
+        <div className="space-y-1">
+          <h1 className="font-heading text-2xl sm:text-3xl font-bold tracking-tight">Add videos to research</h1>
+          <p className="text-sm text-muted-foreground">
+            Paste links or upload local video files directly to transcribe and file in your library.
+          </p>
+        </div>
+        <Button
+          variant="outline"
+          size="sm"
+          onClick={() => setUploadModalOpen(true)}
+          className="gap-2 shrink-0 text-xs font-medium h-9"
+        >
+          <Upload className="h-3.5 w-3.5 text-primary" />
+          <span>Upload Video File</span>
+        </Button>
       </header>
 
       <ol className="flex flex-wrap items-center gap-2 text-sm">
@@ -229,6 +241,10 @@ export function NewJobPage() {
         />
       ) : null}
 
+      <VideoUploadModal
+        open={uploadModalOpen}
+        onClose={() => setUploadModalOpen(false)}
+      />
     </div>
   );
 }

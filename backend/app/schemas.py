@@ -151,6 +151,17 @@ class SubmissionResponse(BaseModel):
     results: list[SubmissionOutcomeResponse]
 
 
+class UploadResponse(BaseModel):
+    job_id: str
+    video_id: str
+    batch_id: str
+    title: str
+    canonical_url: str
+    status: str
+    duration_seconds: float | None = None
+    thumbnail_url: str | None = None
+
+
 class PreviewResponse(BaseModel):
     url: str
     valid: bool

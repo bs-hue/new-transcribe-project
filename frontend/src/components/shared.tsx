@@ -5,6 +5,7 @@ import { Alert, AlertDescription } from "@/components/ui/alert";
 import { Badge } from "@/components/ui/badge";
 import { Button } from "@/components/ui/button";
 import { Card } from "@/components/ui/card";
+import { API_BASE_URL } from "@/lib/api";
 import { cn } from "@/lib/utils";
 
 const PLATFORM_LABELS: Record<string, string> = {
@@ -12,6 +13,7 @@ const PLATFORM_LABELS: Record<string, string> = {
   instagram: "Instagram",
   facebook: "Meta Ads",
   meta: "Meta Ads",
+  upload: "Uploaded",
 };
 
 export function PlatformBadge({ platform }: { platform: string | null | undefined }) {
@@ -58,7 +60,9 @@ export function Thumbnail({
   useEffect(() => setFailed(false), [src]);
 
   const base = cn("shrink-0 rounded-md object-cover", className ?? "h-16 w-28");
-  if (!src || failed) {
+  const resolvedSrc = src?.startsWith("/") && !src.startsWith("//") ? `${API_BASE_URL}${src}` : src;
+
+  if (!resolvedSrc || failed) {
     return (
       <div
         className={cn(base, "flex items-center justify-center bg-muted")}
@@ -71,7 +75,7 @@ export function Thumbnail({
   }
   return (
     <img
-      src={src}
+      src={resolvedSrc}
       alt={alt}
       className={base}
       loading="lazy"

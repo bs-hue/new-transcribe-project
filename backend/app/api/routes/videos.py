@@ -3,15 +3,24 @@
 from __future__ import annotations
 
 import asyncio
+import re
+import uuid
 from dataclasses import asdict
+from pathlib import Path
 
-from fastapi import APIRouter, Query
+from fastapi import APIRouter, File, Form, Query, UploadFile
+from fastapi.responses import FileResponse
 from sqlalchemy import func, select
 from sqlalchemy.orm import selectinload
 
 from app.api.deps import AppSettings, CurrentUser, DbSession
-from app.core.errors import AppError, NotFoundError
-from app.db.models import Job, Transcript, Video
+from app.core.errors import (
+    AppError,
+    LimitExceededError,
+    NotFoundError,
+    UnsupportedFileFormatError,
+)
+from app.db.models import Job, JobStatus, Transcript, Video
 from app.schemas import (
     JobSummary,
     PreviewListResponse,
@@ -19,12 +28,14 @@ from app.schemas import (
     SubmissionOutcomeResponse,
     SubmissionResponse,
     TranscriptDetail,
+    UploadResponse,
     URLListRequest,
     VideoDetail,
     VideoListResponse,
     VideoSummary,
 )
 from app.services.ingest import preview_url, submit_urls
+from app.services.media import probe_and_thumbnail
 from app.services.settings_store import effective_settings
 
 router = APIRouter(prefix="/videos", tags=["videos"])
@@ -185,6 +196,131 @@ async def list_videos(
         offset=offset,
         items=[VideoSummary.model_validate(row) for row in rows],
     )
+
+
+ALLOWED_UPLOAD_EXTENSIONS = {
+    ".mp4",
+    ".mov",
+    ".mkv",
+    ".webm",
+    ".avi",
+    ".m4v",
+    ".wmv",
+    ".flv",
+    ".mp3",
+    ".wav",
+    ".m4a",
+    ".aac",
+    ".ogg",
+    ".flac",
+    ".wma",
+    ".opus",
+}
+
+
+@router.post("/upload", response_model=UploadResponse, status_code=202)
+async def upload_video(
+    session: DbSession,
+    settings: AppSettings,
+    user: CurrentUser,
+    file: UploadFile = File(...),
+    title: str | None = Form(default=None),
+    language: str | None = Form(default=None),
+) -> UploadResponse:
+    """Accept a video or audio file upload directly, save it, and queue a transcription job."""
+    settings = await effective_settings(session, settings)
+
+    raw_filename = file.filename or "uploaded_video.mp4"
+    ext = Path(raw_filename).suffix.lower()
+    if not ext or ext not in ALLOWED_UPLOAD_EXTENSIONS:
+        allowed = ", ".join(sorted(ALLOWED_UPLOAD_EXTENSIONS))
+        raise UnsupportedFileFormatError(
+            f"Unsupported file format '{ext}'. Allowed formats: {allowed}"
+        )
+
+    upload_id = uuid.uuid4().hex
+    upload_dir = settings.resolved_upload_dir() / upload_id
+    upload_dir.mkdir(parents=True, exist_ok=True)
+
+    clean_stem = re.sub(r"[^\w\-.]", "_", Path(raw_filename).stem) or "uploaded"
+    safe_filename = f"{clean_stem}{ext}"
+    target_path = upload_dir / safe_filename
+
+    max_bytes = settings.max_video_filesize_bytes
+    total_bytes = 0
+    chunk_size = 1024 * 1024  # 1MB
+
+    try:
+        with open(target_path, "wb") as f_out:
+            while chunk := await file.read(chunk_size):
+                total_bytes += len(chunk)
+                if total_bytes > max_bytes:
+                    raise LimitExceededError(
+                        f"File exceeds maximum allowed size of {max_bytes // (1024 * 1024)} MB."
+                    )
+                f_out.write(chunk)
+    except Exception:
+        if target_path.exists():
+            target_path.unlink()
+        raise
+
+    thumb_path = upload_dir / "thumbnail.jpg"
+    duration, has_thumb = await probe_and_thumbnail(target_path, thumb_path, settings)
+
+    canonical_url = f"upload://{upload_id}/{safe_filename}"
+    display_title = (title.strip() if title and title.strip() else Path(raw_filename).stem) or "Uploaded Video"
+
+    video = Video(
+        platform="upload",
+        platform_video_id=upload_id,
+        source_url=canonical_url,
+        canonical_url=canonical_url,
+        title=display_title,
+        author=user.full_name or user.email,
+        thumbnail_url=f"/api/videos/uploads/{upload_id}/thumbnail.jpg" if has_thumb else None,
+        duration_seconds=duration,
+        estimated_size_bytes=total_bytes,
+    )
+    session.add(video)
+    await session.flush()
+
+    batch_id = uuid.uuid4().hex
+    job = Job(
+        video_id=video.id,
+        batch_id=batch_id,
+        submitted_by=user.id,
+        status=JobStatus.QUEUED.value,
+        language=language.strip() if language and language.strip() else None,
+    )
+    session.add(job)
+    await session.commit()
+
+    return UploadResponse(
+        job_id=job.id,
+        video_id=video.id,
+        batch_id=batch_id,
+        title=video.title or safe_filename,
+        canonical_url=canonical_url,
+        status=job.status,
+        duration_seconds=video.duration_seconds,
+        thumbnail_url=video.thumbnail_url,
+    )
+
+
+@router.get("/uploads/{upload_id}/{filename}")
+async def get_uploaded_media(
+    upload_id: str,
+    filename: str,
+    settings: AppSettings,
+):
+    upload_dir = settings.resolved_upload_dir()
+    file_path = (upload_dir / upload_id / filename).resolve()
+    # Path traversal protection
+    if not str(file_path).startswith(str(upload_dir.resolve())):
+        raise NotFoundError("File not found.")
+    if not file_path.is_file():
+        raise NotFoundError("File not found.")
+    return FileResponse(file_path)
 
 
 @router.get("/{video_id}", response_model=VideoDetail)
